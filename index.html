@@ -1092,27 +1092,28 @@ document.addEventListener("visibilitychange",()=>{ if (document.visibilityState=
    second off for one color. Items not listed here show a plain tile. Colors are fixed hex
    values from this list, never from imported data. */
 const BRAND_COLORS = {
-  "bud light": ["#1f4fd1", "#b9c3d3"],
-  "busch": ["#2457a0", "#e9eef5"],
-  "busch light": ["#4aa3e0", "#e9eef5"],
-  "busch na": ["#35b2c4", "#2457a0"],
-  "coors light": ["#c3cad3", "#c0272d"],
-  "miller lite": ["#f2f2ee", "#1b3f8b"],
-  "old style": ["#c8102e", "#e9eef5"],
-  "pbr": ["#1a4ca0", "#d22630"],
-  "milwaukees best light": ["#2b66b5", "#d4a72c"],
-  "michelob ultra": ["#1f4a86", "#c3cad3"],
-  "yuengling": ["#c8963e", "#7a1e1e"],
-  "modelo especial": ["#d4a72c", "#1f3a93"],
-  "blue moon": ["#2e4c8f", "#f08a24"],
-  "revolution anti-hero": ["#d6262e"],
-  "hazy little thing": ["#f4a259", "#3ba99c"],
-  "guinness": ["#e8dcc0", "#c9a23a"],
-  "athletic na ipa": ["#3e8e41", "#f28c28"],
-  "nutrl": ["#ececec", "#e0457b"],
-  "super lyte": ["#8e5cf5"],
-  "surfside": ["#3fb8af", "#f6d365"],
-  "carbliss": ["#f5a3c7", "#7ac7e8"]
+  // Checked against current can photos, Nov 2026. [main, second]
+  "bud light": ["#1f4fd1", "#b9c3d3"],            // royal blue, silver
+  "busch": ["#3a73c2", "#e9eef5"],                // blue, white mountains
+  "busch light": ["#e3e8ef", "#2a5fae"],          // silver-white, blue
+  "busch na": ["#e9eef5", "#d7262e"],             // white, red "NA"
+  "coors light": ["#c3cad3", "#c0272d"],          // silver, red script
+  "miller lite": ["#f2f2ee", "#1b3f8b"],          // white, blue "Lite"
+  "old style": ["#efe7d6", "#c8102e"],            // cream, red banner
+  "pbr": ["#1c3f94", "#d22630"],                  // blue, red ribbon
+  "milwaukees best light": ["#2a64b8", "#e9eef5"],// blue, white
+  "michelob ultra": ["#dfe3e8", "#1d3c78"],       // silver-white, navy
+  "yuengling": ["#8d1f2b", "#e9dcc3"],            // maroon, cream label
+  "modelo especial": ["#d1b25e", "#1f3a73"],      // gold, navy
+  "blue moon": ["#2c4a94", "#f08a24"],            // blue, orange
+  "revolution anti-hero": ["#4caf3a", "#1f5e2a"], // bright green, dark green
+  "hazy little thing": ["#1f8f8a", "#e8d33a"],    // teal, yellow
+  "guinness": ["#c9a65a"],                        // gold harp (black can)
+  "athletic na ipa": ["#5fb7e5", "#f2c230"],      // sky blue, yellow
+  "nutrl": ["#f2f2ee", "#f2d33c"],                // white, flavor (varies)
+  "super lyte": ["#f2f2ee", "#f07a5a"],           // white, flavor (varies)
+  "surfside": ["#f39a3d", "#6a4bb5"],             // sunset orange, purple
+  "carbliss": ["#f2f2ee", "#c43b5a"]              // white, flavor (varies)
 };
 const brandColors = name => BRAND_COLORS[String(name||"").toLowerCase().replace(/[’'`]/g,"").replace(/\s+/g," ").trim()] || null;
 
