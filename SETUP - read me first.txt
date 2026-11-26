@@ -6,18 +6,15 @@ everything on that iPad, and keeps working if the Wi-Fi drops.
 Setup takes about 15 minutes, once.
 
 
-1. PUT IT ONLINE (on a computer, one time)
-------------------------------------------
- a. Unzip this package so you have the "app" folder.
- b. Go to netlify.com and sign up for a free account.
- c. While signed in, go to app.netlify.com/drop
- d. Drag the whole "app" folder onto the page.
- e. Netlify gives the site an address like  something-random.netlify.app
-    - Optional: in the project's settings, change the name so the
-      address is easier to type, e.g. theminibar-pos.netlify.app
-    - If the address asks for a password, open the project settings and
-      set the project to Public (newer free accounts can start Private).
- f. Write the address down.
+1. THE ADDRESS (already online)
+------------------------------
+ Mini Bar POS is already online. Shaun hosts it for free on GitHub Pages:
+
+     https://imprez25.github.io/theminibar-pos/
+
+ Nothing to sign up for. Write the address down; it's all the iPad needs.
+ (Backup plan if that ever goes away: any free static web host works.
+ Upload the whole "app" folder and use the address it gives you.)
 
 
 2. PUT IT ON THE IPAD
@@ -69,9 +66,9 @@ Setup takes about 15 minutes, once.
  Prices and counts: change them right in the app (Inventory > Edit,
  then "On hand now" after a recount), or in bulk: Inventory > Download
  menu file, fix it in Excel, then Import menu again.
- New version of the app: drag the new folder onto the project's
- "Deploys" page on Netlify. The iPad picks it up the next time it opens
- with Wi-Fi. Your sales and counts are not affected.
+ New version of the app: Shaun publishes it to the same address. The
+ iPad picks it up the next time it opens with Wi-Fi. Your sales and
+ counts are not affected.
 
 
 IT ALSO RUNS ON
