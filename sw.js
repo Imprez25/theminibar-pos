@@ -1,5 +1,5 @@
 /* Mini Bar POS offline cache. Bump VERSION whenever you upload new files. */
-const VERSION = "minibar-v12";
+const VERSION = "minibar-v13";
 const CORE = ["./", "./index.html", "./logo.png", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png", "./xlsx.mini.min.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

@@ -247,6 +247,8 @@ td button{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(
 .due.short,td.short{color:var(--bad)} .due.over{color:var(--warn)} .due.even{color:var(--ok)}
 .tk.comp .amt{color:var(--muted);font:700 14px var(--body);text-transform:uppercase;letter-spacing:.08em}
 .bannerbtn{margin-left:8px;border:1px solid #ffd9d9;background:transparent;color:#ffd9d9;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px}
+.staffedit input{font:600 18px var(--body);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;box-sizing:border-box;user-select:text}
+.rline.gone input{text-decoration:line-through;opacity:.5}
 .pindots{font:700 30px var(--display);letter-spacing:.3em;text-align:center;min-height:44px;padding:8px;border-radius:12px;background:var(--raise);border:1px solid var(--line)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#000;padding:8px 8px 8px 18px;border-radius:999px;font-weight:700;z-index:30;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);box-sizing:border-box}
 .toast:not(:has(button)){padding:12px 18px}
@@ -1321,7 +1323,7 @@ function managerTools(){
    log/<id>: {at, kind, item, itemName, changes[]}. Counts, deliveries, prices, voids, undone sales, imports,
    restores and PIN changes. Kept to the newest LOG_MAX entries. */
 const LOG_MAX = 500;
-const LOG_KINDS = {comp:"Comp", close:"Shift closed", bank:"Starting cash", edit:"Item changed", delivery:"Delivery received", count:"Shelf count", void:"Sale voided", undo:"Sale undone", import:"Menu imported", restore:"Backup restored", fresh:"Sales history cleared", pin:"Manager PIN"};
+const LOG_KINDS = {staff:"Staff list", comp:"Comp", close:"Shift closed", bank:"Starting cash", edit:"Item changed", delivery:"Delivery received", count:"Shelf count", void:"Sale voided", undo:"Sale undone", import:"Menu imported", restore:"Backup restored", fresh:"Sales history cleared", pin:"Manager PIN"};
 function logEntry(kind, item, changes){ return {at: new Date().toISOString(), kind, item: item ? item.id : null, itemName: item ? item.name : null, changes: changes||[]}; }
 async function logChange(kind, item, changes){
   try {
@@ -1365,7 +1367,46 @@ function workingNow(){
   const cur = onShift();
   return h("div",{class:"working"}, h("small",null,"Working now"),
     staffChips(cur, (n, isNew)=> isNew ? addStaff(n) : setOnShift(n), "staff"),
-    cur ? null : h("p",{class:"muted"}, "Tap your name so tonight's sales, comps and drawer count are tied to you."));
+    cur ? null : h("p",{class:"muted"}, "Tap your name so tonight's sales, comps and drawer count are tied to you."),
+    staffNames().length ? h("button",{type:"button",class:"linkbtn",id:"edit-names",onclick:()=>requireManager("edit the staff list", openStaffEdit)},"Edit names") : null);
+}
+/* Remove or rename names on the Working now list (manager). Past shifts keep the name they were closed with. */
+function openStaffEdit(){
+  const names = staffNames(), err = h("p",{class:"err",hidden:true});
+  const inputs = names.map((n,i)=>{ const inp = h("input",{type:"text",maxlength:"30",autocomplete:"off","aria-label":"Name " + (i+1)}); inp.value = n; return inp; });
+  const removed = new Set();
+  const rows = names.map((n,i)=>{
+    const row = h("div",{class:"rline"}, inputs[i], h("button",{type:"button",class:"btn","aria-label":"Remove " + n,onclick:e=>{
+      if (removed.has(i)){ removed.delete(i); row.classList.remove("gone"); inputs[i].disabled = false; e.currentTarget.textContent = "Remove"; }
+      else { removed.add(i); row.classList.add("gone"); inputs[i].disabled = true; e.currentTarget.textContent = "Undo"; } }},"Remove"));
+    return row;
+  });
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Edit names"},
+    h("h4",null,"Staff names"),
+    h("div",{class:"due",style:"font-size:26px"},"Edit names"),
+    h("p",{class:"muted"},"Fix a spelling or remove someone who no longer works here. Past shifts keep the name they were closed with."),
+    h("div",{class:"rlist staffedit"}, rows),
+    err,
+    h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
+      h("button",{type:"button",class:"btn primary",id:"names-save",onclick:async()=>{
+        const kept = [], changes = [];
+        names.forEach((n,i)=>{
+          if (removed.has(i)){ changes.push("Removed " + n); return; }
+          const v = inputs[i].value.trim().slice(0,30);
+          if (!v){ changes.push("Removed " + n); return; }
+          if (kept.some(k=>k.toLowerCase()===v.toLowerCase())) return;
+          if (v !== n) changes.push("Renamed " + n + " → " + v);
+          kept.push(v);
+        });
+        if (!changes.length){ closeSheet(); return; }
+        try {
+          await S.db.collection("settings").doc("staff").set({names: kept});
+          const cur = onShift(), i = names.indexOf(cur);
+          if (cur && i >= 0){ const after = removed.has(i) || !inputs[i].value.trim() ? "" : inputs[i].value.trim().slice(0,30); if (after !== cur) await setOnShift(after); }
+        } catch(e){ err.textContent = "Couldn't save. Try again."; err.hidden = false; return; }
+        logChange("staff", null, changes); closeSheet(); toast("Names updated");
+      }},"Save")));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
 }
 
 /* ---------- comps ----------

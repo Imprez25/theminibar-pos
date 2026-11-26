@@ -76,6 +76,8 @@ Setup takes about 15 minutes, once.
  Deliveries: Inventory > Receive delivery, pick the distributor; it
  starts from your reorder list, so usually you just tap Add delivery.
  Recounts: Inventory > Count mode, type what's on the shelf, Save.
+ Staff names: Today > Working now. Edit names (manager PIN) removes or
+ fixes one.
  Comps: tap drinks, then Comp (next to Undo last), pick a reason. They
  come off inventory and show on Today but never touch the drawer.
  Owner reports (Today, manager PIN): Weekly summary, Nightly log file
