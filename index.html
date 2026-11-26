@@ -205,6 +205,38 @@ td button{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(
 .field label{font-size:13px;font-weight:600;color:var(--muted)}
 .field input{font:600 20px var(--body);padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-height:52px;width:100%;box-sizing:border-box;user-select:text}
 .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field select,.field textarea{font:600 17px var(--body);padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-height:52px;width:100%;box-sizing:border-box;user-select:text}
+.field textarea{min-height:90px;resize:vertical;font-weight:500}
+.field.wide{grid-column:1/-1}
+/* Message the owner + reorder list */
+.reasons{display:flex;flex-wrap:wrap;gap:8px}
+.reasons button{min-height:46px;border-radius:999px;border:1px solid var(--line);background:var(--raise);color:var(--fg);padding:0 16px;font-weight:600;font-size:15px}
+.reasons button[aria-pressed="true"]{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+.linkbtn{background:none;border:0;padding:6px 0;color:var(--brass);font-weight:700;font-size:15px;text-align:left}
+.olist{display:flex;flex-direction:column;gap:14px}
+.olist h5{margin:0 0 6px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.oline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--hair)}
+.oline b{font:700 18px var(--display);white-space:nowrap}
+.oline small{display:block;color:var(--muted);font-size:12.5px}
+.msglog{display:flex;flex-direction:column;gap:8px}
+.msg{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.msg .body{flex:1;min-width:0}
+.msg .body b{display:block}
+.msg .body p{margin:4px 0 0;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
+.msg .body small{color:var(--muted)}
+.card.wide{max-width:760px}
+.rlist{display:flex;flex-direction:column}
+.rlist h5{margin:14px 0 2px;font:700 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--brass)}
+.rline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--hair)}
+.rline small{display:block;color:var(--muted);font-size:12.5px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{min-width:52px;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--fg);font:700 15px var(--body)}
+.stepper .q{min-width:44px;text-align:center;font:700 22px var(--display)}
+.cline input{font:600 20px var(--body);padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:104px;min-height:48px;text-align:right;box-sizing:border-box;user-select:text}
+.diff{font-size:12.5px;font-weight:700;color:var(--muted);min-width:56px;text-align:right} .diff.neg{color:var(--bad)} .diff.pos{color:var(--ok)}
+.row.sticky{position:sticky;bottom:-22px;background:var(--panel);padding:12px 0;margin-bottom:-12px;border-top:1px solid var(--line);align-items:center;gap:10px}
+@media (max-width:760px){ .rline:not(.cline){grid-template-columns:1fr} .stepper button{min-width:46px} .row.sticky .muted{display:none} }
+.pindots{font:700 30px var(--display);letter-spacing:.3em;text-align:center;min-height:44px;padding:8px;border-radius:12px;background:var(--raise);border:1px solid var(--line)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#000;padding:8px 8px 8px 18px;border-radius:999px;font-weight:700;z-index:30;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);box-sizing:border-box}
 .toast:not(:has(button)){padding:12px 18px}
 .toast button{border:0;border-radius:999px;background:#000;color:var(--fg);font-weight:700;min-height:40px;padding:0 16px;flex-shrink:0}
@@ -318,7 +350,7 @@ function groupsFor(cat){
   }
   return [...seen.entries()].sort((a,b)=>a[1]-b[1]).map(e=>e[0]);
 }
-const S = {products:[], tickets:[], closeouts:[], tabs:[], order:[], view:"register", cat:"beer", db:null, dl:null, pay:null, armed:null, closing:false, loaded:false, tabOpen:null, tabArmed:null, hist:[], clearArmed:false, target:null};
+const S = {products:[], tickets:[], closeouts:[], tabs:[], notes:[], log:[], settings:{}, unlockedUntil:0, order:[], view:"register", cat:"beer", db:null, dl:null, pay:null, armed:null, closing:false, loaded:false, tabOpen:null, tabArmed:null, hist:[], clearArmed:false, target:null};
 const $ = id => document.getElementById(id);
 
 function h(tag, attrs, ...kids){
@@ -713,6 +745,7 @@ async function undoSale(){
     if (P.tabId && P.tabDoc) await withRetry(()=>S.db.doc("tabs/"+P.tabId).set(P.tabDoc));
     if (P.undoOrder){ S.order = P.undoOrder; saveDraft(); renderOrder(); }
     S.pay = null; renderPay();
+    logChange("undo", null, [money(P.total) + (P.tabId ? " tab for " + P.tabName : " sale"), "right after payment"]);
     toast(P.tabId ? P.tabName + "'s tab is open again" : "Sale undone. The order is back.");
   } catch(e){ P.undoing = false; P.err = "Couldn't undo. Void it on the Today screen."; renderPay(); }
 }
@@ -765,13 +798,15 @@ function renderToday(){
         h("span",{class:"t num"}, clock(t.at)),
         h("span",{class:"it"}, (t.tab ? "Tab: " + String(t.tab) + " — " : "") + (t.items||[]).map(i=>(num(i.qty)||0)+"× "+String(i.name||"")+(i.v?" ("+i.v+")":"")).join(", ")),
         h("span",{class:"amt num"}, money(t.total)),
-        h("button",{type:"button",class:armed?"arm":"",onclick:()=>voidTicket(t.id)}, armed ? "Confirm void" : "Void")));
+        h("button",{type:"button",class:armed?"arm":"",onclick:()=>requireManager("void a sale", ()=>voidTicket(t.id))}, armed ? "Confirm void" : "Void")));
     }
     w.append(list);
   }
 
   const past = [...S.closeouts].sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt))).slice(0,14);
-  if (past.length){
+  if (past.length && !isUnlocked()){
+    w.append(h("h2",{class:"sec"},"Past shifts"), h("button",{type:"button",class:"btn",id:"show-past",onclick:()=>requireManager("see past shifts", renderToday)},"Show past shifts (manager)"));
+  } else if (past.length){
     w.append(h("h2",{class:"sec"},"Past shifts"));
     const tb = h("tbody");
     for (const c of past) tb.append(h("tr",null, h("td",null,dayStr(c.closedAt)), h("td",{class:"num"},clock(c.openedAt)+" – "+clock(c.closedAt)), h("td",{class:"num"},num(c.tickets)||0), h("td",{class:"num"},money(c.total))));
@@ -781,7 +816,9 @@ function renderToday(){
 async function voidTicket(id){
   if (S.armed !== id){ S.armed = id; renderToday(); clearTimeout(voidTicket.t); voidTicket.t=setTimeout(()=>{S.armed=null;renderToday();},4000); return; }
   S.armed = null;
-  try { await withRetry(()=>S.db.doc("tickets/"+id).delete()); toast("Sale voided"); }
+  const tk = S.tickets.find(t=>t.id===id);
+  try { await withRetry(()=>S.db.doc("tickets/"+id).delete()); toast("Sale voided");
+    if (tk) logChange("void", null, [money(tk.total) + " sale from " + clock(tk.at), (tk.items||[]).map(i=>(num(i.qty)||0)+"× "+String(i.name||"")).join(", ")]); }
   catch(e){ toast("Couldn't void. Try again."); }
 }
 async function closeShift(){
@@ -808,16 +845,23 @@ function renderInventory(){
   w.append(h("div",{class:"row"}, h("h2",{class:"sec"},"Inventory")));
   w.append(h("div",{class:"row",style:"align-items:flex-start;gap:20px"},
     h("div",{class:"toolgroup"}, h("small",null,"Menu"), h("div",{class:"datatools"},
-      h("button",{type:"button",class:"btn",id:"import-menu",onclick:pickImport},"Import menu"),
-      h("button",{type:"button",class:"btn",id:"menu-file",onclick:exportMenu},"Download menu file"))),
+      h("button",{type:"button",class:"btn",id:"import-menu",onclick:()=>requireManager("import a menu", pickImport)},"Import menu"),
+      h("button",{type:"button",class:"btn",id:"menu-file",onclick:()=>requireManager("download the menu file", exportMenu)},"Download menu file"))),
+    h("div",{class:"toolgroup"}, h("small",null,"Stock"), h("div",{class:"datatools"},
+      h("button",{type:"button",class:"btn",id:"receive",onclick:()=>requireManager("receive a delivery", openReceive)},"Receive delivery"),
+      h("button",{type:"button",class:"btn",id:"count-mode",onclick:()=>requireManager("count the shelves", openCount)},"Count mode"),
+      h("button",{type:"button",class:"btn",id:"reorder",onclick:()=>requireManager("see the reorder list", openReorder)},"Reorder list"),
+      h("button",{type:"button",class:"btn",id:"message-owner",onclick:()=>openMessage({})},"Message owner"))),
     h("div",{class:"toolgroup"}, h("small",null,"Records"), h("div",{class:"datatools"},
-      h("button",{type:"button",class:"btn",id:"export",onclick:exportCsv},"Count sheet"),
+      h("button",{type:"button",class:"btn",id:"export",onclick:()=>requireManager("download the count sheet", exportCsv)},"Count sheet"),
       h("button",{type:"button",class:"btn",id:"backup",onclick:backup},"Back up"),
-      h("button",{type:"button",class:"btn",id:"restore",onclick:pickRestore},"Restore"),
-      h("button",{type:"button",class:"btn",id:"start-fresh",onclick:startFresh},"Start fresh")))));
+      h("button",{type:"button",class:"btn",id:"restore",onclick:()=>requireManager("restore a backup", pickRestore)},"Restore"),
+      h("button",{type:"button",class:"btn",id:"start-fresh",onclick:()=>requireManager("clear sales history", startFresh)},"Start fresh"))),
+    managerTools()));
   w.append(h("p",{class:"muted"},
     "Left = last count + deliveries since − sold since. Tap Edit to recount an item or add a delivery. Beer and wine count by the can or bottle; liquor sells by the pour and counts down in bottles. " +
     (low.length ? low.length + " running low. " : "") + (nc.length ? nc.length + " not counted yet." : "")));
+  renderMessageLog(w);
   const tb = h("tbody");
   for (const cat of ["beer","liquor","wine"]) for (const grp of groupsFor(cat)){
     const items = S.products.filter(p=>p.group===grp && p.cat===cat).sort((a,b)=>(a.sort||0)-(b.sort||0));
@@ -837,7 +881,7 @@ function renderInventory(){
         h("td",{class:"num"}, soldTxt),
         h("td",{class:"num"}, shift ? String(shift) : "—"),
         h("td",{class:"num"}, leftCell),
-        h("td",null, h("button",{type:"button",onclick:()=>openEdit(p.id)},"Edit"))));
+        h("td",null, h("button",{type:"button",onclick:()=>requireManager("change counts, deliveries and prices", ()=>openEdit(p.id), {item:p.id})},"Edit"))));
     }
   }
   if (!S.products.length) w.append(h("p",{class:"empty"},"No menu yet. Tap Import menu and pick the menu spreadsheet."));
@@ -856,8 +900,13 @@ function openEdit(id){
       liquor ? [f("e-shot","Shot price ($)",p.shot,"0.5"), f("e-mixed","Mixed price ($)",p.mixed,"0.5")] : f("e-price","Price ($)",p.price,"0.5"),
       f("e-count","On hand now ("+unit+")", nowLeft, liquor?"0.1":"1"),
       f("e-add","Delivery to add ("+unit+")","", liquor?"0.1":"1"),
-      f("e-cost","Cost per " + (liquor?"bottle":p.cat==="wine"?"bottle":"can") + " ($)", p.cost, "0.01")),
-    h("p",{class:"muted"}, "On hand now: change it only after you count the shelf. It resets this item's count to what's really there. Delivery to add: a case of 24 is 24."),
+      f("e-cost","Cost per " + (liquor?"bottle":p.cat==="wine"?"bottle":"can") + " ($)", p.cost, "0.01"),
+      f("e-par","Par level ("+unit+")", p.par, "1"),
+      h("div",{class:"field"}, h("label",{for:"e-vendor"},"Distributor"),
+        h("input",{id:"e-vendor",type:"text",list:"vendor-list",autocomplete:"off",maxlength:"60",value:String(p.vendor||"")}),
+        h("datalist",{id:"vendor-list"}, vendorNames().map(v=>h("option",{value:v}))))),
+    h("p",{class:"muted"}, "On hand now: change it only after you count the shelf. It resets this item's count to what's really there. Delivery to add: a case of 24 is 24. Par level: how many you want on hand after a delivery; the reorder list orders up to it."),
+    h("button",{type:"button",class:"linkbtn",onclick:()=>openMessage({item:p.id, reason: stockLevel(p)==="out" ? "shows-out" : "shows-in"})},"Count looks wrong? Message the owner"),
     err,
     h("div",{class:"row"},
       h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
@@ -874,10 +923,423 @@ function openEdit(id){
         }
         const add = val("e-add"); if (add) upd.received = Math.round((((upd.received != null ? upd.received : num(p.received))||0)+add)*10)/10;
         const cost = val("e-cost"); if (cost != null || $("e-cost").value.trim()==="") upd.cost = cost;
+        const par = val("e-par"); if (par != null || $("e-par").value.trim()==="") upd.par = par;
+        upd.vendor = $("e-vendor").value.trim().slice(0,60) || null;
         if (Object.values(upd).some(v=>Number.isNaN(v))){ err.textContent="Use plain numbers, like 24 or 4.5."; err.hidden=false; return; }
-        try { await withRetry(()=>S.db.doc("products/"+p.id).update(upd)); closeSheet(); toast(p.name+" updated"); }
+        const ch = [], same = (x,y) => (num(x)==null && num(y)==null) || num(x)===num(y);
+        for (const [k,label] of [["price","Price"],["shot","Shot"],["mixed","Mixed"]]) if (upd[k] !== undefined && !same(upd[k], p[k])) ch.push(label + " " + money(p[k]) + " → " + money(upd[k]));
+        if (upd.start !== undefined) ch.push("Count " + (nowLeft == null ? "not counted" : nowLeft) + " → " + (upd.start == null ? "not counted" : upd.start));
+        if (add) ch.push("Delivery +" + add + " " + unit);
+        if (upd.cost !== undefined && !same(upd.cost, p.cost)) ch.push("Cost " + (num(p.cost)==null ? "none" : money(p.cost)) + " → " + (upd.cost==null ? "none" : money(upd.cost)));
+        if (upd.par !== undefined && !same(upd.par, p.par)) ch.push("Par " + (num(p.par)==null ? "none" : p.par) + " → " + (upd.par==null ? "none" : upd.par));
+        if ((upd.vendor||"") !== String(p.vendor||"")) ch.push("Distributor " + (p.vendor || "none") + " → " + (upd.vendor || "none"));
+        try { await withRetry(()=>S.db.doc("products/"+p.id).update(upd)); closeSheet(); toast(p.name+" updated"); if (ch.length) logChange("edit", p, ch); }
         catch(e){ err.textContent="Couldn't save. Check the Wi-Fi and try again."; err.hidden=false; }
       }},"Save")));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+/* ---------- ordering ---------- */
+function vendorNames(){ return [...new Set(S.products.map(p=>String(p.vendor||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
+function unitWord(p, n){ return (p.unit==="bottle" || p.cat==="wine") ? (n===1?"bottle":"bottles") : (n===1?"can":"cans"); }
+function haveText(p, left){ return p.unit==="bottle" ? left.toFixed(1) : String(Math.floor(left)); }
+function menuRank(p){ return [String(p.vendor||"").trim().toLowerCase() || "￿", ["beer","liquor","wine"].indexOf(p.cat), groupsFor(p.cat).indexOf(p.group), num(p.sort)||0]; }
+function byRank(a, b){ const x = menuRank(a), y = menuRank(b); for (let i=0;i<x.length;i++){ if (x[i]<y[i]) return -1; if (x[i]>y[i]) return 1; } return 0; }
+/* Order up to par. Cans order the gap. Liquor orders whole bottles, rounded: an open bottle more than half full
+   still counts as one (par 2 with 1.6 left orders nothing; with 0.4 left it orders 2). */
+function reorderData(){
+  const lines = [], uncounted = [], noPar = [];
+  for (const p of [...S.products].sort(byRank)){
+    const par = num(p.par);
+    if (par == null || par <= 0){ noPar.push(p); continue; }
+    const r = remaining(p);
+    if (r == null){ uncounted.push(p); continue; }
+    const left = Math.max(0, r);
+    const qty = p.unit === "bottle" ? Math.round(par - left) : Math.ceil(par - Math.floor(left));
+    if (qty > 0) lines.push({p, qty, left, par});
+  }
+  return {lines, uncounted, noPar};
+}
+function reorderText(d){
+  const out = ["Mini Bar order · " + dayStr(new Date().toISOString())];
+  let vendor = null;
+  for (const l of d.lines){
+    const v = String(l.p.vendor||"").trim() || "No distributor set";
+    if (v !== vendor){ out.push("", v); vendor = v; }
+    out.push("- " + l.p.name + ": " + l.qty + " " + unitWord(l.p, l.qty) + " (have " + haveText(l.p, l.left) + ", par " + l.par + ")");
+  }
+  if (!d.lines.length) out.push("", "Nothing below par.");
+  if (d.uncounted.length) out.push("", "Not counted, check before ordering: " + d.uncounted.map(p=>p.name).join(", "));
+  return out.join("\n");
+}
+function openReorder(){
+  const d = reorderData(), groups = [];
+  let cur = null;
+  for (const l of d.lines){
+    const v = String(l.p.vendor||"").trim() || "No distributor set";
+    if (!cur || cur.v !== v){ cur = {v, rows:[]}; groups.push(cur); }
+    const cs = Math.round(l.qty/24*2)/2, cases = l.p.cat==="beer" && l.qty >= 12 ? " · about " + cs + (cs===1 ? " case" : " cases") + " of 24" : "";
+    cur.rows.push(h("div",{class:"oline"},
+      h("div",null, h("span",null,l.p.name), h("small",null,"Have " + haveText(l.p, l.left) + " · par " + l.par + cases)),
+      h("b",{class:"num"}, l.qty + " " + unitWord(l.p, l.qty))));
+  }
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Reorder list"},
+    h("h4",null,"Reorder list · " + dayStr(new Date().toISOString())),
+    h("div",{class:"due",style:"font-size:28px"}, d.lines.length ? d.lines.length + " item" + (d.lines.length===1?"":"s") + " to order" : "Nothing below par"),
+    groups.length ? h("div",{class:"olist"}, groups.map(g=>h("div",null, h("h5",null,g.v), g.rows))) : null,
+    d.uncounted.length ? h("p",{class:"note"}, "Not counted yet, so not on the list: " + d.uncounted.map(p=>p.name).join(", ") + ". Count them before you order.") : null,
+    d.noPar.length ? h("p",{class:"muted"}, d.noPar.length + " item" + (d.noPar.length===1?" has":"s have") + " no par level and " + (d.noPar.length===1?"is":"are") + " left off. Set one with Edit, or in the menu file's Par column.") : null,
+    h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Close"), h("span",{class:"sp"}),
+      h("button",{type:"button",class:"btn primary",id:"share-order",disabled:!d.lines.length,onclick:()=>shareText(reorderText(reorderData()),"Mini Bar order")},"Share list")));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+/* ---------- receive delivery ----------
+   One screen for a whole delivery: pick the distributor, quantities start from the reorder list (most
+   deliveries match the order), adjust with +/- 1 and +/- 1 case (24 cans), then Add delivery once. */
+function appSays(p){ const r = remaining(p); return r == null ? null : (p.unit === "bottle" ? Math.max(0,r).toFixed(1) : String(Math.max(0,Math.floor(r)))); }
+function openReceive(){
+  const R = {qty:{}, showAll:false};
+  const pre = reorderData(); for (const l of pre.lines) R.qty[l.p.id] = l.qty;
+  const vkey = p => String(p.vendor||"").trim();
+  const vendors = vendorNames(), hasNone = S.products.some(p=>!vkey(p));
+  R.vendor = pre.lines.length ? vkey(pre.lines[0].p) : (vendors.length ? vendors[0] : null);
+  const draw = () => {
+    const items = [...S.products].sort(byRank).filter(p => R.vendor == null || vkey(p) === R.vendor);
+    let shown = R.showAll ? items : items.filter(p => (R.qty[p.id]||0) > 0);
+    const empty = !shown.length; if (empty) shown = items;
+    const totalEl = h("span",{class:"muted",id:"recv-total"});
+    const addBtn = h("button",{type:"button",class:"btn primary",id:"recv-add",style:"flex:1"},"Add delivery");
+    const err = h("p",{class:"err",hidden:true});
+    const refresh = () => {
+      const lines = items.filter(p => (R.qty[p.id]||0) > 0), units = lines.reduce((s,p)=>s+R.qty[p.id],0);
+      totalEl.textContent = lines.length ? lines.length + " item" + (lines.length===1?"":"s") + " · " + units + " units" : "Nothing added yet";
+      addBtn.disabled = !lines.length;
+    };
+    const chip = (label, v) => h("button",{type:"button","aria-pressed":String(R.vendor===v),onclick:()=>{ R.vendor = v; R.showAll = false; draw(); }}, label);
+    const rows = shown.map(p => {
+      const q = h("span",{class:"q num"}, String(R.qty[p.id]||0)), cs = p.cat === "beer" ? 24 : 0;
+      const step = d => h("button",{type:"button","aria-label":(d>0?"Add ":"Remove ") + Math.abs(d) + " " + p.name,onclick:()=>{ R.qty[p.id] = Math.max(0, (R.qty[p.id]||0) + d); q.textContent = String(R.qty[p.id]); refresh(); }},
+        (d>0?"+":"−") + (Math.abs(d)===24 ? "case" : Math.abs(d)));
+      const says = appSays(p);
+      return h("div",{class:"rline"},
+        h("div",null, h("span",null,p.name), h("small",null, (says == null ? "Not counted yet" : "Have " + says) + (num(p.par)!=null ? " · par " + p.par : "") + " · " + unitWord(p, 2))),
+        h("div",{class:"stepper"}, cs ? step(-cs) : null, step(-1), q, step(1), cs ? step(cs) : null));
+    });
+    const card = h("div",{class:"card wide",role:"dialog","aria-modal":"true","aria-label":"Receive delivery"},
+      h("h4",null,"Receive delivery"),
+      h("div",{class:"due",style:"font-size:26px"}, "What came in?"),
+      h("div",{class:"reasons",role:"group","aria-label":"Distributor"}, vendors.map(v=>chip(v, v)), hasNone ? chip("No distributor", "") : null, chip("All items", null)),
+      h("p",{class:"muted"}, empty ? "Nothing from this distributor is on the reorder list. Tap + for what came in." : (R.showAll ? "All items from this distributor." : "Filled in from the reorder list. Change anything that came in different.")),
+      h("div",{class:"rlist"}, rows),
+      (!R.showAll && !empty) ? h("button",{type:"button",class:"linkbtn",onclick:()=>{ R.showAll = true; draw(); }},"Something else came in? Show all items") : null,
+      err,
+      h("div",{class:"row sticky"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), totalEl, addBtn));
+    addBtn.onclick = async () => {
+      const lines = items.filter(p => (R.qty[p.id]||0) > 0); if (!lines.length) return;
+      const prev = {};
+      addBtn.disabled = true;
+      try {
+        for (const p of lines){ prev[p.id] = num(p.received)||0; await withRetry(()=>S.db.doc("products/"+p.id).update({received: Math.round(((num(p.received)||0) + R.qty[p.id])*10)/10})); }
+      } catch(e){ err.textContent = "Couldn't save all of it. Check the counts, then try again."; err.hidden = false; addBtn.disabled = false; return; }
+      const who = {id:null, name: R.vendor == null ? "All items" : (R.vendor || "No distributor")};
+      logChange("delivery", who, lines.map(p => p.name + " +" + R.qty[p.id] + " " + unitWord(p, R.qty[p.id])));
+      closeSheet();
+      toast("Delivery added · " + lines.length + " item" + (lines.length===1?"":"s"), "Undo", async () => {
+        for (const id of Object.keys(prev)) { try { await S.db.doc("products/"+id).update({received: prev[id]}); } catch(e){} }
+        logChange("delivery", who, ["Undone right after adding"]); toast("Delivery undone");
+      });
+    };
+    refresh();
+    const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+  };
+  draw();
+}
+
+/* ---------- count mode ----------
+   Walk the cooler and shelves once: every item in one list, type what's there, Save all. Blank = skip.
+   Typed counts are kept in localStorage until saved, so closing the sheet by accident loses nothing. */
+const COUNT_DRAFT = "mb-count-draft";
+function openCount(){
+  let draft = {}; try { draft = JSON.parse(localStorage.getItem(COUNT_DRAFT)||"{}") || {}; } catch(e){ draft = {}; }
+  const keep = () => { try { localStorage.setItem(COUNT_DRAFT, JSON.stringify(draft)); } catch(e){} };
+  const C = {cat: "beer"};
+  const draw = () => {
+    const known = new Set(S.products.map(p=>p.id)); for (const k of Object.keys(draft)) if (!known.has(k)) delete draft[k];
+    const items = S.products.filter(p=>p.cat===C.cat).sort((a,b)=>groupsFor(a.cat).indexOf(a.group)-groupsFor(b.cat).indexOf(b.group) || (a.sort||0)-(b.sort||0));
+    const progress = h("span",{class:"muted",id:"count-progress"}), saveBtn = h("button",{type:"button",class:"btn primary",id:"count-save",style:"flex:1"},"Save counts");
+    const err = h("p",{class:"err",hidden:true});
+    const refresh = () => { const n = Object.keys(draft).length; progress.textContent = n + " of " + S.products.length + " counted"; saveBtn.textContent = n ? "Save " + n + " count" + (n===1?"":"s") : "Save counts"; saveBtn.disabled = !n; };
+    const tabs = h("div",{class:"reasons",role:"group","aria-label":"Category"}, [["beer","Beer & seltzer"],["liquor","Liquor"],["wine","Wine"]].filter(([c])=>S.products.some(p=>p.cat===c)).map(([c,label])=>{
+      const done = S.products.filter(p=>p.cat===c && draft[p.id]!=null).length, all = S.products.filter(p=>p.cat===c).length;
+      return h("button",{type:"button","aria-pressed":String(C.cat===c),onclick:()=>{ C.cat = c; draw(); }}, label + " " + done + "/" + all); }));
+    const inputs = [];
+    let grp = null; const rows = [];
+    for (const p of items){
+      if (p.group !== grp){ grp = p.group; rows.push(h("h5",null,grp)); }
+      const says = appSays(p), liquor = p.unit === "bottle";
+      const diff = h("span",{class:"diff"});
+      const showDiff = () => { const v = draft[p.id]; if (v == null || says == null){ diff.textContent = ""; diff.className = "diff"; return; }
+        const d = Math.round((Number(v) - Number(says))*10)/10; diff.textContent = d === 0 ? "matches" : (d > 0 ? "+" : "−") + Math.abs(d); diff.className = "diff " + (d === 0 ? "" : d < 0 ? "neg" : "pos"); };
+      const inp = h("input",{type:"number",inputmode: liquor ? "decimal" : "numeric",step: liquor ? "0.1" : "1",min:"0","aria-label":p.name + " count","data-id":p.id});
+      inp.value = draft[p.id] != null ? String(draft[p.id]) : "";
+      inp.addEventListener("input", ()=>{ const v = inp.value.trim(); if (v === "" ) delete draft[p.id]; else draft[p.id] = v; keep(); showDiff(); refresh(); });
+      inp.addEventListener("keydown", e=>{ if (e.key === "Enter"){ e.preventDefault(); const i = inputs.indexOf(inp); if (inputs[i+1]) inputs[i+1].focus(); else inp.blur(); } });
+      inputs.push(inp); showDiff();
+      rows.push(h("div",{class:"rline cline"},
+        h("div",null, h("span",null,p.name), h("small",null, (says == null ? "Not counted yet" : "App says " + says) + " · " + (liquor ? "bottles, tenths ok" : unitWord(p, 2)))),
+        h("div",{class:"stepper"}, diff, inp)));
+    }
+    const card = h("div",{class:"card wide",role:"dialog","aria-modal":"true","aria-label":"Count mode"},
+      h("h4",null,"Count mode"),
+      h("div",{class:"due",style:"font-size:26px"}, "Count what's on the shelf"),
+      h("p",{class:"muted"}, "Type what's actually there. Leave an item blank to skip it. Liquor counts in bottles: 0.5 is a half bottle. Your numbers are kept on this iPad until you save."),
+      tabs,
+      h("div",{class:"rlist"}, rows),
+      err,
+      h("div",{class:"row sticky"},
+        h("button",{type:"button",class:"btn",onclick:closeSheet},"Close"),
+        Object.keys(draft).length ? h("button",{type:"button",class:"btn",onclick:()=>{ draft = {}; keep(); draw(); }},"Clear") : null,
+        progress, saveBtn));
+    saveBtn.onclick = async () => {
+      const ids = Object.keys(draft).filter(id=>S.products.some(p=>p.id===id));
+      const bad = ids.filter(id=>{ const n = Number(draft[id]); return !isFinite(n) || n < 0; });
+      if (bad.length){ err.textContent = "Use plain numbers for: " + bad.map(id=>S.products.find(p=>p.id===id).name).join(", "); err.hidden = false; return; }
+      const prev = {}, lines = [];
+      saveBtn.disabled = true;
+      try {
+        for (const id of ids){
+          const p = S.products.find(x=>x.id===id), c = Math.round(Number(draft[id])*10)/10, says = appSays(p);
+          prev[id] = {start: p.start == null ? null : p.start, received: num(p.received)||0, soldBase: num(p.soldBase)||0};
+          await withRetry(()=>S.db.doc("products/"+id).update({start: c, received: 0, soldBase: soldUnits(id)}));
+          lines.push({name: p.name, says, c, off: says == null || Number(says) !== c});
+        }
+      } catch(e){ err.textContent = "Couldn't save all of it. Try again."; err.hidden = false; saveBtn.disabled = false; return; }
+      lines.sort((a,b)=>b.off - a.off);
+      const off = lines.filter(l=>l.off).length;
+      logChange("count", {id:null, name: lines.length + " item" + (lines.length===1?"":"s") + (off ? ", " + off + " different" : "")}, lines.map(l => l.name + " " + (l.says == null ? "not counted" : l.says) + " → " + l.c));
+      draft = {}; keep(); closeSheet();
+      toast("Counts saved · " + lines.length + " item" + (lines.length===1?"":"s") + (off ? " · " + off + " were off" : ""), "Undo", async () => {
+        for (const id of Object.keys(prev)) { try { await S.db.doc("products/"+id).update(prev[id]); } catch(e){} }
+        logChange("count", {id:null, name:"Count"}, ["Undone right after saving"]); toast("Counts undone");
+      });
+    };
+    refresh();
+    const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+  };
+  draw();
+}
+async function shareText(text, title){
+  try { if (navigator.share){ await navigator.share({title, text}); return true; } }
+  catch(e){ if (e && e.name === "AbortError") return false; }
+  try { await navigator.clipboard.writeText(text); toast("Copied. Paste it into a text or email."); return true; }
+  catch(e){ toast("Couldn't share on this device"); return false; }
+}
+
+/* ---------- message the owner ----------
+   There is no server, so a message can't send itself: it is saved to the log on this iPad (and in backups),
+   then Messages, Mail or the share sheet opens with the text filled in for the bartender to send. */
+const REASONS = [["shows-in","Shows in stock, but we're out"],["shows-out","Shows out, but we have it"],["low","Running low"],["broken","Broken or spilled"],["register","Register problem"],["other","Something else"]];
+const reasonLabel = k => (REASONS.find(r=>r[0]===k)||[,""])[1];
+function contact(){ return S.settings.contact || {}; }
+function openMessage(pre){
+  const M = {reason: pre.reason || null, editContact: false};
+  const draw = keep => {
+    const c = contact(), hasC = !!(c.phone || c.email);
+    const sel = h("select",{id:"m-item"}, h("option",{value:""},"No particular item"),
+      [...S.products].sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(p=>{ const lt = leftText(p); return h("option",{value:p.id}, p.name + (lt ? " (" + lt + ")" : "")); }));
+    const note = h("textarea",{id:"m-text",maxlength:"500",placeholder:"What happened? For example: cooler is empty, the case is in the back."});
+    const err = h("p",{class:"err",hidden:true});
+    const reasons = h("div",{class:"reasons",role:"group","aria-label":"Reason"}, REASONS.map(([k,label])=>h("button",{type:"button","aria-pressed":String(M.reason===k),onclick:e=>{
+      M.reason = M.reason===k ? null : k; for (const b of reasons.children) b.setAttribute("aria-pressed", String(b===e.currentTarget && M.reason===k)); }}, label)));
+    const cf = (idn, label, type, val, mode) => h("div",{class:"field"}, h("label",{for:idn},label), h("input",{id:idn,type,inputmode:mode||null,autocomplete:"off",maxlength:"80",value:String(val||"")}));
+    const contactBox = (!hasC || M.editContact)
+      ? [h("p",{class:"muted"}, "Who gets these messages? Set it once on this iPad. A phone number sends a text; an email opens Mail."),
+         h("div",{class:"fields"}, cf("c-name","Owner or manager","text",c.name), cf("c-phone","Phone for texts","tel",c.phone,"tel"), h("div",{class:"field wide"}, h("label",{for:"c-email"},"Email (optional)"), h("input",{id:"c-email",type:"email",autocomplete:"off",maxlength:"120",value:String(c.email||"")})))]
+      : h("p",{class:"muted"}, "Goes to " + (c.name || "the owner") + " · " + (c.phone || c.email) + " ", h("button",{type:"button",class:"linkbtn",onclick:()=>{ keepDraft(); M.editContact = true; draw(true); }},"Change"));
+    const keepDraft = () => { M.item = sel.value; M.text = note.value; };
+    const send = async how => {
+      keepDraft();
+      const item = S.products.find(p=>p.id===M.item), text = M.text.trim();
+      if (!M.reason && !text){ err.textContent = "Pick a reason or write a note."; err.hidden = false; return; }
+      let cNow = contact();
+      if (!hasC || M.editContact){
+        const nm = $("c-name").value.trim().slice(0,80), ph = $("c-phone").value.replace(/[^\d+]/g,"").slice(0,20), em = $("c-email").value.trim().slice(0,120);
+        if (how !== "log" && !ph && !em){ err.textContent = "Add a phone number or email so the message has somewhere to go, or tap Save to log."; err.hidden = false; return; }
+        if (ph || em || nm){ cNow = {name:nm, phone:ph, email:em}; try { await S.db.collection("settings").doc("contact").set(cNow); } catch(e){} }
+      }
+      const at = new Date().toISOString(), lt = item ? leftText(item) : "";
+      const rec = {at, reason: M.reason, text, item: item ? item.id : null, itemName: item ? item.name : null, shows: lt || null, via: how, done: false};
+      try { await withRetry(()=>S.db.collection("notes").doc().set(rec)); }
+      catch(e){ err.textContent = "Couldn't save the message. Try again."; err.hidden = false; return; }
+      const body = ["Mini Bar POS · " + dayStr(at) + " " + clock(at),
+        (M.reason ? reasonLabel(M.reason) : "Message") + (item ? ": " + item.name + (lt ? " (app shows " + lt + ")" : " (not counted)") : ""),
+        text ? "Note: " + text : ""].filter(Boolean).join("\n");
+      closeSheet();
+      if (how === "log"){ toast("Saved to the message log"); return; }
+      const phone = (cNow.phone||"").replace(/[^\d+]/g,""), email = cNow.email||"";
+      if (how === "text" && phone){ location.href = "sms:" + phone + "?&body=" + encodeURIComponent(body); toast("Saved. Tap Send in Messages."); }
+      else if (email){ location.href = "mailto:" + encodeURIComponent(email) + "?subject=" + encodeURIComponent("Mini Bar: " + (M.reason ? reasonLabel(M.reason) : "message")) + "&body=" + encodeURIComponent(body); toast("Saved. Tap Send in Mail."); }
+      else { if (await shareText(body, "Mini Bar message")) toast("Saved to the message log"); }
+    };
+    const c2 = contact(), canText = !!c2.phone || !hasC || M.editContact;
+    const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Message the owner"},
+      h("h4",null,"Message the owner"),
+      h("div",{class:"due",style:"font-size:26px"}, "What's going on?"),
+      reasons,
+      h("div",{class:"field wide"}, h("label",{for:"m-item"},"Item"), sel),
+      h("div",{class:"field wide"}, h("label",{for:"m-text"},"Note"), note),
+      contactBox,
+      h("p",{class:"muted"}, "If you've just counted it, you can also fix the count: Edit, then On hand now."),
+      err,
+      h("div",{class:"row"},
+        h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"),
+        h("button",{type:"button",class:"btn",id:"msg-log",onclick:()=>send("log")},"Save to log"),
+        h("span",{class:"sp"}),
+        (c2.phone && c2.email && !M.editContact) ? h("button",{type:"button",class:"btn",onclick:()=>send("email")},"Email") : null,
+        h("button",{type:"button",class:"btn primary",id:"msg-send",onclick:()=>send(canText ? "text" : "email")}, (c2.phone || !hasC || M.editContact) ? "Send text" : "Send email")));
+    sel.value = keep ? (M.item||"") : (pre.item || ""); note.value = keep ? (M.text||"") : "";
+    const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+  };
+  draw(false);
+}
+function renderMessageLog(w){
+  const open = S.notes.filter(n=>!n.done).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const handled = S.notes.length - open.length;
+  if (!S.notes.length) return;
+  w.append(h("div",{class:"row"}, h("h2",{class:"sec",style:"font-size:20px"}, "Messages to the owner" + (open.length ? " · " + open.length + " open" : "")),
+    h("span",{class:"sp"}), handled ? h("span",{class:"muted"}, handled + " handled") : null));
+  if (!open.length){ w.append(h("p",{class:"muted"},"No open messages.")); return; }
+  w.append(h("div",{class:"msglog",id:"msglog"}, open.slice(0,20).map(n=>h("div",{class:"msg"},
+    h("div",{class:"body"},
+      h("b",null, (n.reason ? reasonLabel(n.reason) : "Message") + (n.itemName ? ": " + n.itemName : "")),
+      h("small",null, dayStr(n.at) + " " + clock(n.at) + (n.shows ? " · app showed " + n.shows : "") + (n.via === "log" ? " · saved, not sent" : "")),
+      n.text ? h("p",null,n.text) : null),
+    h("button",{type:"button",class:"btn",onclick:()=>requireManager("mark messages done", async()=>{ try { await S.db.doc("notes/"+n.id).update({done:true, doneAt:new Date().toISOString()}); } catch(e){ toast("Couldn't update. Try again."); } })},"Done")))));
+}
+/* Synchronous SHA-256 (hex). Sync so the PIN check keeps the tap's "user gesture" for file pickers and sharing. */
+function sha256(text){
+  const rot = (v,a) => (v>>>a) | (v<<(32-a)), H = [], K = [];
+  for (let n = 2, c = 0; c < 64; n++){ let p = true; for (let f = 2; f*f <= n; f++) if (n%f === 0){ p = false; break; }
+    if (p){ if (c < 8) H[c] = (Math.pow(n,1/2)*4294967296)|0; K[c++] = (Math.pow(n,1/3)*4294967296)|0; } }
+  const b = new TextEncoder().encode(text), l = b.length, total = (((l+8)>>6)+1)*16, w = new Array(total).fill(0);
+  for (let i = 0; i < l; i++) w[i>>2] |= b[i] << ((3-i%4)*8);
+  w[l>>2] |= 0x80 << ((3-l%4)*8);
+  w[total-1] = (l*8)>>>0; w[total-2] = Math.floor(l*8/4294967296);
+  for (let j = 0; j < total; j += 16){
+    const x = w.slice(j, j+16), old = H.slice(0);
+    for (let i = 0; i < 64; i++){
+      if (i >= 16){ const a = x[i-15], d = x[i-2]; x[i] = (x[i-16] + (rot(a,7)^rot(a,18)^(a>>>3)) + x[i-7] + (rot(d,17)^rot(d,19)^(d>>>10)))|0; }
+      const a = H[0], e = H[4];
+      const t1 = H[7] + (rot(e,6)^rot(e,11)^rot(e,25)) + ((e&H[5])^(~e&H[6])) + K[i] + x[i];
+      const t2 = (rot(a,2)^rot(a,13)^rot(a,22)) + ((a&H[1])^(a&H[2])^(H[1]&H[2]));
+      H.unshift((t1+t2)|0); H[4] = (H[4]+t1)|0; H.pop();
+    }
+    for (let i = 0; i < 8; i++) H[i] = (H[i]+old[i])|0;
+  }
+  return H.map(v => (v>>>0).toString(16).padStart(8,"0")).join("");
+}
+
+/* ---------- manager PIN ----------
+   One PIN for the owner or manager, stored as a salted SHA-256 hash in settings/manager (never the digits).
+   It guards counts, prices, deliveries, voids, past shifts, the reorder list and the data tools. It only
+   protects this iPad: it stops casual changes and mistakes, not someone with developer tools. No PIN set =
+   everything open, as before. Unlocking lasts MGR_MINUTES from the last manager action, and locks when the
+   app is hidden. */
+const MGR_MINUTES = 5;
+function mgr(){ const m = S.settings.manager; return m && m.hash ? m : null; }
+function isUnlocked(){ return !mgr() || (S.unlockedUntil||0) > Date.now(); }
+function touchUnlock(){ S.unlockedUntil = Date.now() + MGR_MINUTES*60000; clearTimeout(touchUnlock.t); touchUnlock.t = setTimeout(()=>{ S.unlockedUntil = 0; renderAll(); }, MGR_MINUTES*60000 + 50); }
+function lockNow(){ S.unlockedUntil = 0; clearTimeout(touchUnlock.t); renderAll(); }
+function newSalt(){ const a = new Uint8Array(8); crypto.getRandomValues(a); return [...a].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+/* Run fn now if allowed, else ask for the PIN first. opts.item offers bartenders "message the owner" instead. */
+function requireManager(why, fn, opts){
+  if (isUnlocked()){ touchUnlock(); return fn(); }
+  openPin(Object.assign({why, fn}, opts||{}));
+}
+function pinPad(state, onEnter){
+  const dots = h("div",{class:"pindots","aria-live":"polite",id:"pin-dots"}, state.entry ? "•".repeat(state.entry.length) : "Enter PIN");
+  const key = k => h("button",{type:"button",class:"num","aria-label":k==="del"?"Delete":k,onclick:()=>{
+    if (k==="del") state.entry = state.entry.slice(0,-1); else if (state.entry.length < 8) state.entry += k;
+    dots.textContent = state.entry ? "•".repeat(state.entry.length) : "Enter PIN"; }}, k==="del" ? "⌫" : k);
+  return [dots, h("div",{class:"keypad"}, ["1","2","3","4","5","6","7","8","9","","0","del"].map(k=>k ? key(k) : h("span"))),
+    h("button",{type:"button",class:"btn primary",id:"pin-ok",onclick:()=>onEnter(state.entry)}, state.okLabel || "Unlock")];
+}
+function openPin(o){
+  const st = {entry:""}, err = h("p",{class:"err",hidden:true});
+  const item = o.item ? S.products.find(p=>p.id===o.item) : null;
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Manager PIN"},
+    h("h4",null,"Manager PIN"),
+    h("div",{class:"due",style:"font-size:24px"}, "Manager PIN needed to " + o.why),
+    pinPad(st, entry=>{
+      const m = mgr(); if (!m){ closeSheet(); return o.fn && o.fn(); }
+      if ((S.pinWaitUntil||0) > Date.now()){ err.textContent = "Too many tries. Wait 30 seconds."; err.hidden = false; return; }
+      if (entry.length >= 4 && sha256(m.salt + ":" + entry) === m.hash){
+        S.pinFails = 0; closeSheet(); touchUnlock(); renderAll(); if (o.fn) o.fn(); return;
+      }
+      S.pinFails = (S.pinFails||0) + 1; st.entry = ""; $("pin-dots").textContent = "Enter PIN";
+      if (S.pinFails >= 5){ S.pinFails = 0; S.pinWaitUntil = Date.now() + 30000; err.textContent = "Too many tries. Wait 30 seconds."; }
+      else err.textContent = "That PIN isn't right.";
+      err.hidden = false;
+    }),
+    err,
+    item ? h("button",{type:"button",class:"linkbtn",onclick:()=>openMessage({item:item.id, reason: stockLevel(item)==="out" ? "shows-out" : "shows-in"})},"Not a manager? Message the owner about " + item.name) : null,
+    h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+function openSetPin(){
+  const st = {entry:"", okLabel:"Next"}, err = h("p",{class:"err",hidden:true});
+  let first = null;
+  const title = h("div",{class:"due",style:"font-size:24px"}, mgr() ? "Choose a new PIN" : "Choose a manager PIN");
+  const help = h("p",{class:"muted"}, "4 to 8 digits. Bartenders won't need it; give it only to whoever handles counts, deliveries, prices and voids.");
+  const pad = pinPad(st, async entry=>{
+    if (!/^\d{4,8}$/.test(entry)){ err.textContent = "Use 4 to 8 digits."; err.hidden = false; return; }
+    if (first == null){ first = entry; st.entry = ""; $("pin-dots").textContent = "Enter PIN"; title.textContent = "Enter it again"; $("pin-ok").textContent = "Save PIN"; err.hidden = true; return; }
+    if (entry !== first){ first = null; st.entry = ""; $("pin-dots").textContent = "Enter PIN"; title.textContent = "They didn't match. Choose a PIN"; $("pin-ok").textContent = "Next"; return; }
+    const salt = newSalt(), had = !!mgr();
+    try { await S.db.collection("settings").doc("manager").set({hash: sha256(salt + ":" + entry), salt, setAt: new Date().toISOString()}); }
+    catch(e){ err.textContent = "Couldn't save. Try again."; err.hidden = false; return; }
+    logChange("pin", null, [had ? "Manager PIN changed" : "Manager PIN set"]);
+    closeSheet(); touchUnlock(); toast(had ? "PIN changed" : "PIN set. Manager screens now need it."); renderAll();
+  });
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Set manager PIN"},
+    h("h4",null,"Manager PIN"), title, help, pad, err,
+    mgr() ? h("button",{type:"button",class:"linkbtn",onclick:async()=>{
+      try { await S.db.doc("settings/manager").delete(); } catch(e){ toast("Couldn't remove the PIN"); return; }
+      logChange("pin", null, ["Manager PIN removed"]); closeSheet(); toast("PIN removed. Everything is open."); renderAll(); }},"Turn off the PIN") : null,
+    h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+function managerTools(){
+  const m = mgr(), open = isUnlocked();
+  return h("div",{class:"toolgroup"}, h("small",null, m ? (open ? "Manager · unlocked" : "Manager · locked") : "Manager"), h("div",{class:"datatools"},
+    !m ? h("button",{type:"button",class:"btn",id:"set-pin",onclick:openSetPin},"Set manager PIN")
+      : open ? [h("button",{type:"button",class:"btn",id:"lock-now",onclick:lockNow},"Lock now"), h("button",{type:"button",class:"btn",onclick:()=>requireManager("change the PIN", openSetPin)},"Change PIN")]
+      : h("button",{type:"button",class:"btn",id:"unlock",onclick:()=>openPin({why:"unlock manager screens"})},"Unlock"),
+    h("button",{type:"button",class:"btn",id:"change-log",onclick:()=>requireManager("see the change log", openChangeLog)},"Change log")));
+}
+
+/* ---------- change log ----------
+   log/<id>: {at, kind, item, itemName, changes[]}. Counts, deliveries, prices, voids, undone sales, imports,
+   restores and PIN changes. Kept to the newest LOG_MAX entries. */
+const LOG_MAX = 500;
+const LOG_KINDS = {edit:"Item changed", delivery:"Delivery received", count:"Shelf count", void:"Sale voided", undo:"Sale undone", import:"Menu imported", restore:"Backup restored", fresh:"Sales history cleared", pin:"Manager PIN"};
+function logEntry(kind, item, changes){ return {at: new Date().toISOString(), kind, item: item ? item.id : null, itemName: item ? item.name : null, changes: changes||[]}; }
+async function logChange(kind, item, changes){
+  try {
+    await S.db.collection("log").doc().set(logEntry(kind, item, changes));
+    const extra = S.log.length + 1 - LOG_MAX;
+    if (extra > 0) for (const e of [...S.log].sort((a,b)=>String(a.at).localeCompare(String(b.at))).slice(0, extra)) await S.db.doc("log/"+e.id).delete();
+  } catch(e){}
+}
+function openChangeLog(){
+  const rows = [...S.log].sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(0,150);
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Change log"},
+    h("h4",null,"Change log"),
+    h("div",{class:"due",style:"font-size:26px"}, rows.length ? "Latest changes" : "No changes yet"),
+    h("p",{class:"muted"},"Counts, deliveries, prices, voids, undone sales, imports and restores on this iPad, newest first."),
+    rows.length ? h("div",{class:"olist",id:"changelog"}, rows.map(e=>h("div",{class:"oline"},
+      h("div",null, h("span",null, (LOG_KINDS[e.kind]||e.kind) + (e.itemName ? ": " + e.itemName : "")), h("small",null,(e.changes||[]).join(" · "))),
+      h("small",{class:"num",style:"white-space:nowrap"}, dayStr(e.at) + " " + clock(e.at))))) : null,
+    h("button",{type:"button",class:"btn",onclick:closeSheet},"Close"));
   const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
 }
 function closeSheet(){ const sh=$("sheet"); sh.hidden=true; sh.replaceChildren(); S.pay=null; S.tabOpen=null; S.tabArmed=null; }
@@ -912,12 +1374,12 @@ function pickRestore(){
       h("div",{class:"due",style:"font-size:28px"}, "Replace everything on this iPad?"),
       h("p",{class:"muted"}, "This swaps the menu, counts, open tabs, sales and past shifts on this device for the backup saved " + dayStr(parsed.savedAt) + " at " + clock(parsed.savedAt) + ". Anything rung up since then is lost."),
       h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
-        h("button",{type:"button",class:"btn danger",onclick:()=>{ try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); location.reload(); } catch(e){ toast("Couldn't restore. The device storage is full."); } }},"Replace and restore")));
+        h("button",{type:"button",class:"btn danger",onclick:()=>{ try { data["log/r" + Date.now().toString(36)] = logEntry("restore", null, ["Backup from " + dayStr(parsed.savedAt) + " " + clock(parsed.savedAt)]); localStorage.setItem(STORE_KEY, JSON.stringify(data)); location.reload(); } catch(e){ toast("Couldn't restore. The device storage is full."); } }},"Replace and restore")));
     const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
   });
   document.body.append(inp); inp.click();
 }
-const COLS = {item:["item","name","drink"], category:["category","type"], section:["section","group"], price:["price"], shot:["shot price","shot"], mixed:["mixed price","mixed"], pours:["pours per bottle","pours"], onhand:["on hand","count","on hand now"], cost:["unit cost","cost","cost per unit"]};
+const COLS = {item:["item","name","drink"], category:["category","type"], section:["section","group"], price:["price"], shot:["shot price","shot"], mixed:["mixed price","mixed"], pours:["pours per bottle","pours"], onhand:["on hand","count","on hand now"], cost:["unit cost","cost","cost per unit"], par:["par","par level","reorder to"], vendor:["distributor","vendor","supplier"]};
 function loadXLSX(){
   if (window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res, rej)=>{ const sc=document.createElement("script"); sc.src="xlsx.mini.min.js"; sc.onload=()=>res(window.XLSX); sc.onerror=()=>rej(new Error("load")); document.head.append(sc); });
@@ -945,6 +1407,9 @@ function parseMenu(rows){
     if (Number.isNaN(onhand)){ errors.push(line + "On Hand must be a number."); continue; }
     if (Number.isNaN(cost)){ errors.push(line + "Unit Cost must be a number."); continue; }
     it.onHand = onhand; it.cost = cost;
+    /* Par and Distributor are optional columns: when a file has no such column, items keep what they had. */
+    if (col.par >= 0){ const par = cellNum(get(r,"par")); if (Number.isNaN(par)){ errors.push(line + "Par must be a number."); continue; } it.par = par; }
+    if (col.vendor >= 0) it.vendor = String(get(r,"vendor")||"").trim().slice(0,60) || null;
     if (cat === "liquor"){
       const shot = cellNum(get(r,"shot")), mixed = cellNum(get(r,"mixed")), pours = cellNum(get(r,"pours"));
       if (shot == null || Number.isNaN(shot)){ errors.push(line + "needs a Shot Price."); continue; }
@@ -1007,19 +1472,22 @@ async function applyImport(items){
       if (it.onHand != null){ d.start = it.onHand; d.received = 0; d.soldBase = soldNow[it.id]; }
       else if (o){ d.start = num(o.start); d.received = num(o.received)||0; d.soldBase = num(o.soldBase)||0; if (d.cost == null && num(o.cost) != null) d.cost = o.cost; }
       else { d.start = null; d.received = 0; d.soldBase = soldNow[it.id]; }
+      d.par = it.par !== undefined ? it.par : (o && num(o.par) != null ? o.par : null);
+      d.vendor = it.vendor !== undefined ? it.vendor : (o && o.vendor ? o.vendor : null);
       await S.db.doc("products/"+it.id).set(d);
     }
     for (const p of old.values()) if (!items.some(i=>i.id===p.id)) await S.db.doc("products/"+p.id).delete();
     closeSheet(); toast("Menu imported · " + items.length + " items");
+    logChange("import", null, [items.length + " items", items.filter(i=>i.onHand!=null).length + " counts replaced"]);
   } catch(e){ closeSheet(); toast("Import stopped partway. Restore your last backup or import again."); }
 }
 async function exportMenu(){
   const q = v => { const t = String(v==null?"":v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
-  const rows = [["Item","Category","Section","Price","Shot Price","Mixed Price","Pours per Bottle","On Hand","Unit Cost"]];
+  const rows = [["Item","Category","Section","Price","Shot Price","Mixed Price","Pours per Bottle","On Hand","Unit Cost","Par","Distributor"]];
   for (const cat of ["beer","liquor","wine"]) for (const grp of groupsFor(cat)) for (const p of S.products.filter(x=>x.group===grp && x.cat===cat).sort((a,b)=>(a.sort||0)-(b.sort||0))){
     const r = remaining(p);
     rows.push([p.name, cat==="beer"?"Beer":cat==="liquor"?"Liquor":"Wine", grp, cat==="liquor"?"":p.price, cat==="liquor"?p.shot:"", cat==="liquor"?p.mixed:"", cat==="liquor"?p.pours:"",
-      r==null ? "" : (p.unit==="bottle" ? Math.max(0,r).toFixed(1) : Math.max(0,Math.floor(r))), num(p.cost)==null?"":p.cost]);
+      r==null ? "" : (p.unit==="bottle" ? Math.max(0,r).toFixed(1) : Math.max(0,Math.floor(r))), num(p.cost)==null?"":p.cost, num(p.par)==null?"":p.par, p.vendor||""]);
   }
   await saveFile("mini-bar-menu-"+stamp()+".csv", rows.map(r=>r.map(q).join(",")).join("\n"), "text/csv");
 }
@@ -1042,6 +1510,7 @@ async function doStartFresh(){
     for (const c of [...S.closeouts]) await S.db.doc("closeouts/"+c.id).delete();
     S.order = []; S.hist = []; S.target = null; saveDraft(); renderOrder();
     closeSheet(); toast("Sales history cleared. Ready to open.");
+    logChange("fresh", null, ["Sales, tabs and past shifts deleted"]);
   } catch(e){ closeSheet(); toast("Couldn't finish. Try again."); }
 }
 async function exportCsv(){
@@ -1084,9 +1553,8 @@ $("sheet").addEventListener("click", e=>{ if (e.target===$("sheet") && !(S.pay &
 
 let lock=null;
 async function wake(){ if (lock || !navigator.wakeLock) return; try { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release",()=>lock=null); } catch(e){} }
-document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") lock=null; });
+document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") lock=null; else if (S.unlockedUntil){ S.unlockedUntil = 0; renderAll(); } });
 
-/* ---------- device-only storage (used when the account store can't be reached) ---------- */
 /* Brand colors for beer and seltzer tiles, matched by item name (case and apostrophes ignored),
    so items renamed or re-imported from the menu file keep their color. [main, second]; leave
    second off for one color. Items not listed here show a plain tile. Colors are fixed hex
@@ -1151,6 +1619,7 @@ function defaultProducts(){
   }
   return out;
 }
+/* ---------- device-only storage (used when the account store can't be reached) ---------- */
 function localDB(){
   const KEY = "mb-register-v1";
   let store = {};
@@ -1180,12 +1649,15 @@ function subscribe(db, onFail){
   db.collection("tickets").onSnapshot(s=>{ S.tickets = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
   db.collection("tabs").onSnapshot(s=>{ S.tabs = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
   db.collection("closeouts").onSnapshot(s=>{ S.closeouts = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
+  db.collection("notes").onSnapshot(s=>{ S.notes = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
+  db.collection("log").onSnapshot(s=>{ S.log = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); }, onFail);
+  db.collection("settings").onSnapshot(s=>{ S.settings = {}; for (const d of s.docs) if (d.exists) S.settings[d.id] = d.data(); renderAll(); }, onFail);
   return () => gotProducts;
 }
 function goLocal(why){
   if (S.mode === "local") return;
   S.mode = "local"; S.db = localDB();
-  S.products = []; S.tickets = []; S.tabs = []; S.closeouts = [];
+  S.products = []; S.tickets = []; S.tabs = []; S.closeouts = []; S.notes = []; S.log = []; S.settings = {};
   subscribe(S.db, ()=>{});
 }
 loadDraft(); renderAll();

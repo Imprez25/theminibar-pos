@@ -66,6 +66,20 @@ Setup takes about 15 minutes, once.
  Prices and counts: change them right in the app (Inventory > Edit,
  then "On hand now" after a recount), or in bulk: Inventory > Download
  menu file, fix it in Excel, then Import menu again.
+ Manager PIN: Inventory > Set manager PIN (do this before opening).
+ Counts, deliveries, prices, voids, past shifts, Import, Restore and
+ Start fresh then need it; bartenders can still ring sales, run tabs,
+ close the shift and message you. Inventory > Change log shows every
+ count, price and void change. Forgot it? Shaun can reset it.
+ Deliveries: Inventory > Receive delivery, pick the distributor; it
+ starts from your reorder list, so usually you just tap Add delivery.
+ Recounts: Inventory > Count mode, type what's on the shelf, Save.
+ Ordering: give items a Par level and Distributor (Edit, or the Par and
+ Distributor columns in the menu file). Inventory > Reorder list shows
+ what to order, grouped by distributor, and Share list sends it.
+ Bartender messages: Inventory > Message owner. Set your name and phone
+ the first time. Messages open in Messages for the bartender to send,
+ and stay listed on the Inventory screen until you tap Done.
  New version of the app: Shaun publishes it to the same address. The
  iPad picks it up the next time it opens with Wi-Fi. Your sales and
  counts are not affected.
