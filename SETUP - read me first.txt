@@ -1,0 +1,81 @@
+MINI BAR POS - SETUP
+=============================
+
+This folder is the whole Mini Bar POS app. It runs in Safari on an iPad, saves
+everything on that iPad, and keeps working if the Wi-Fi drops.
+Setup takes about 15 minutes, once.
+
+
+1. PUT IT ONLINE (on a computer, one time)
+------------------------------------------
+ a. Unzip this package so you have the "app" folder.
+ b. Go to netlify.com and sign up for a free account.
+ c. While signed in, go to app.netlify.com/drop
+ d. Drag the whole "app" folder onto the page.
+ e. Netlify gives the site an address like  something-random.netlify.app
+    - Optional: in the project's settings, change the name so the
+      address is easier to type, e.g. theminibar-pos.netlify.app
+    - If the address asks for a password, open the project settings and
+      set the project to Public (newer free accounts can start Private).
+ f. Write the address down.
+
+
+2. PUT IT ON THE IPAD
+---------------------
+ a. On the bar's iPad, open Safari and go to the address from step 1.
+ b. Tap the Share button, then "Add to Home Screen", then Add.
+ c. From now on, open Mini Bar POS ONLY from that home-screen icon.
+    (The icon and Safari keep separate data. Always use the icon.)
+ d. Recommended: Settings > Accessibility > Guided Access > On.
+    Then triple-click the top button while Mini Bar POS is open to lock
+    the iPad to it.
+
+
+3. FIRST DAY: MENU AND COUNTS (clean slate)
+-------------------------------------------
+ Mini Bar POS starts with the menu and prices already loaded and
+ every count blank ("Not counted").
+ a. Open "mini-bar-menu-template.xlsx" (in this folder) in Excel or
+    Numbers. The "How to use" tab explains each column.
+ b. Count the cooler and shelf. Type each count in the yellow
+    "On Hand" column. Fix any prices, add or delete rows. Save.
+ c. Get the file onto the iPad (AirDrop, email or iCloud Drive).
+ d. Mini Bar POS > Inventory > Import menu > pick the file > Replace menu.
+ e. Ring a few test drinks and a test tab to practice.
+ f. Before opening night: Inventory > Start fresh > Clear sales history.
+    That wipes the practice sales and keeps the menu and counts.
+ g. Inventory > Back up.
+
+4. EVERY NIGHT
+--------------
+ a. Count the drawer. Today screen > Close shift (tap twice).
+ b. Tap "Back up now" in the message that pops up, and save the file to
+    Files, email it to yourself, or AirDrop it. You can also back up any
+    time from the Inventory screen.
+
+    The backup matters: all sales live on this one iPad. If the iPad is
+    lost, broken or reset, or someone deletes the home-screen icon,
+    the data is gone unless you have a backup.
+
+
+5. MOVING TO A NEW IPAD
+-----------------------
+ Do step 2 on the new iPad, then Inventory > Restore and pick your
+ latest backup file.
+
+
+6. CHANGES AND UPDATES
+----------------------
+ Prices and counts: change them right in the app (Inventory > Edit,
+ then "On hand now" after a recount), or in bulk: Inventory > Download
+ menu file, fix it in Excel, then Import menu again.
+ New version of the app: drag the new folder onto the project's
+ "Deploys" page on Netlify. The iPad picks it up the next time it opens
+ with Wi-Fi. Your sales and counts are not affected.
+
+
+IT ALSO RUNS ON
+---------------
+ Any computer or tablet with a modern browser (Chrome, Edge, Safari),
+ including a Linux box. In Chrome, open the address and use
+ "Install app" from the menu. Each device keeps its own data.

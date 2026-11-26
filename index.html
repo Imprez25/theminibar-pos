@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mini Bar POS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Mini Bar POS">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: back-bar till. Logo header; drink buttons on the left as a price-tiered grid with stock gauges; on the right, the order printed as a thermal bar ticket. Stacks on phones with the ticket pinned at the bottom. One dark look to match the white-on-black logo. */
+:root{
+  --bg:#101011; --panel:#18181a; --raise:#232326; --line:#303035; --hair:#26262a;
+  --fg:#f2f1ee; --muted:#a19f99; --brass:#d8b15a; --brass-ink:#1b1405;
+  --paper:#ecebe7; --ink:#141414; --ink-soft:#5c5a55; --perf:#c9c7c1;
+  --c2:#e9e7e2; --c2-ink:#141414; --c4:#7fb0e6; --c4-ink:#0b1a2b; --c5:#e9a94b; --c5-ink:#241503;
+  --ok:#6fcf8f; --warn:#e9a23b; --bad:#ef6b6b;
+  --display:"Zilla Slab", Georgia, serif; --body:Inter, system-ui, -apple-system, "Segoe UI", sans-serif; --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html{background:#000}
+body{margin:0}
+header{padding-top:max(12px,env(safe-area-inset-top,0px))}
+.datatools{display:flex;gap:8px;flex-wrap:wrap}
+.toolgroup{display:flex;flex-direction:column;gap:6px}
+.toolgroup small{color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.errlist{margin:0;padding-left:18px;color:var(--bad);font-size:14px;line-height:1.5}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;display:flex;flex-direction:column;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Header */
+header{display:flex;align-items:center;gap:20px;padding-block:12px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));background:#000;border-bottom:1px solid var(--hair)}
+.logo{display:block;height:38px;width:auto;flex-shrink:0}
+nav{display:flex;gap:2px;background:#151517;border:1px solid var(--hair);border-radius:12px;padding:4px}
+nav button{border:0;background:none;padding:0 16px;border-radius:8px;font-weight:600;color:var(--muted);min-height:44px;display:flex;align-items:center;gap:6px}
+nav button[aria-current="page"]{background:var(--fg);color:#000}
+nav .badge{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--brass);color:var(--brass-ink);font-size:12px;font-weight:700;text-align:center}
+.shift{margin-left:auto;display:flex;align-items:center;gap:14px}
+.shift .blk{text-align:right;line-height:1.1}
+.shift small{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.shift b{font:700 24px var(--display)}
+.shift .tabsum{border-left:1px solid var(--line);padding-left:14px;color:var(--fg);font-size:13px;font-weight:600;line-height:1.25;text-align:right}
+.shift .tabsum span{display:block;color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+
+.banner{background:#3a1d1d;color:#ffd9d9;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));font-size:14px}
+main{flex:1;min-height:0;display:flex}
+.view{flex:1;min-height:0;display:flex}
+
+/* Register: menu */
+.menu{flex:1;min-width:0;display:flex;flex-direction:column}
+.cats{display:flex;gap:8px;padding:14px 18px 6px max(18px,env(safe-area-inset-left,0px))}
+.cats button{flex:1;max-width:190px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:0 14px;font:700 17px var(--display);letter-spacing:.02em;min-height:50px;display:flex;align-items:center;justify-content:center;gap:8px}
+.cats button span{font:600 12px var(--body);color:var(--muted)}
+.cats button[aria-pressed="true"]{background:var(--fg);color:#000;border-color:var(--fg)}
+.cats button[aria-pressed="true"] span{color:#55534e}
+.grid{flex:1;overflow-y:auto;padding:10px 18px 28px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px}
+.group h2{margin:0 0 10px;display:flex;align-items:center;gap:10px;font:700 19px var(--display);letter-spacing:.01em}
+.group h2::after{content:"";flex:1;height:1px;background:var(--hair)}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font:700 14px var(--body);background:var(--c2);color:var(--c2-ink)}
+.chip.t4{background:var(--c4);color:var(--c4-ink)} .chip.t5{background:var(--c5);color:var(--c5-ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--panel);min-height:92px;padding:12px 12px 14px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:10px;transition:transform .06s,background .06s}
+.tile:active{transform:scale(.97);background:var(--raise)}
+.tile .n{font-weight:600;font-size:15.5px;line-height:1.2}
+.tile .foot{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.tile .chip{font-size:15px}
+.left{font-size:11.5px;color:var(--muted);font-weight:500}
+.left.low{color:var(--warn)} .left.out{color:var(--bad)}
+.gauge{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--hair)}
+.gauge i{display:block;height:100%;background:#4f8f63}
+.gauge.low i{background:var(--warn)} .gauge.out i{background:var(--bad)}
+.tile.isout{opacity:.55}
+.ltile{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:12px 10px 14px;display:flex;flex-direction:column;gap:10px}
+.ltile .top{display:flex;flex-direction:column;gap:2px;padding-inline:2px;min-height:38px}
+.ltile .n{font-weight:600;font-size:15.5px}
+.ltile .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ltile .pair button{border:1px solid var(--line);background:var(--raise);border-radius:10px;min-height:52px;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.ltile .pair button:active{transform:scale(.96);background:#2d2d31}
+.ltile .pair small{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.ltile .pair b{font:700 19px var(--display)}
+
+/* Register: ticket rail */
+.rail{width:360px;flex-shrink:0;border-left:1px solid var(--hair);background:#0b0b0c;display:flex;flex-direction:column;gap:10px;padding:14px max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) 14px}
+.railhead{display:flex;justify-content:space-between;align-items:center}
+.railhead h3{margin:0;font:700 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.railtools{display:flex;gap:6px}
+.railtools button{border:1px solid var(--line);background:var(--raise);border-radius:9px;min-height:38px;padding:0 12px;font-size:13px;font-weight:700}
+.railtools button:disabled{opacity:.35;cursor:default}
+.railtools button.arm{background:#4a1f1f;border-color:#6a2a2a;color:#ffd3d3}
+.ticket{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);border-radius:6px 6px 0 0;padding:14px 14px 0;font-family:var(--mono);position:relative;
+  -webkit-mask:radial-gradient(circle 7px at 9px 100%,#0000 98%,#000) -9px 0/18px 100% repeat-x;mask:radial-gradient(circle 7px at 9px 100%,#0000 98%,#000) -9px 0/18px 100% repeat-x;padding-bottom:12px}
+.ticket .thead{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);padding-bottom:8px;border-bottom:1px dashed var(--perf)}
+.lines{flex:1;overflow-y:auto;min-height:0}
+.empty{color:var(--muted);padding:24px 12px;text-align:center;line-height:1.5}
+.ticket .empty{color:var(--ink-soft);font-family:var(--body);font-size:14px}
+.line{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--perf)}
+.line .nm{min-width:0;line-height:1.25;font-size:14px;font-weight:500}
+.line .nm small{display:block;color:var(--ink-soft);font-size:11.5px}
+.line .amt{font-weight:600;font-size:14px}
+.qty{display:flex;align-items:center;gap:2px}
+.qty b{min-width:26px;text-align:center;font-size:16px;font-weight:600}
+.qty button{width:40px;height:40px;border-radius:999px;border:1px solid #bdbbb4;background:#fff;color:var(--ink);font:600 20px/1 var(--body)}
+.qty button:active{background:#dcdad4}
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 2px;border-top:2px solid var(--ink);margin-top:-1px}
+.total span{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.total b{font:700 34px var(--display);color:var(--ink)}
+.payrow{display:grid;grid-template-columns:1fr 1.5fr;gap:8px}
+.charge{border:0;border-radius:14px;background:var(--brass);color:var(--brass-ink);font:700 20px var(--body);min-height:66px}
+.totab{border:1px solid var(--line);border-radius:14px;background:var(--raise);font:700 17px var(--body);min-height:66px}
+.charge:disabled,.totab:disabled{opacity:.35;cursor:default}
+.tabmode-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--brass);color:var(--brass-ink);border-radius:10px;padding:8px 8px 8px 12px;font-weight:700}
+.tabmode-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabmode-bar span small{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.tabmode-bar button{border:0;border-radius:8px;background:rgba(0,0,0,.18);color:var(--brass-ink);min-height:38px;padding:0 12px;font-weight:700;flex-shrink:0}
+.ticket.tabmode{box-shadow:inset 0 4px 0 var(--brass)}
+.tabactions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Tabs */
+.tabgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tabcard{border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);padding:14px 16px 16px;text-align:left;display:flex;flex-direction:column;gap:4px;min-height:120px;font-family:var(--mono)}
+.tabcard:active{transform:scale(.98)}
+.tabcard .nm{font:700 24px var(--display);overflow-wrap:anywhere}
+.tabcard .amt{font:700 28px var(--display)}
+.tabcard .meta{color:var(--ink-soft);font-size:12px}
+.picklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.picklist button{min-height:60px;border-radius:12px;border:1px solid var(--line);background:var(--raise);text-align:left;padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.picklist button b{font:700 18px var(--display);overflow-wrap:anywhere}
+.picklist button small{color:var(--muted)}
+.newtab{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.tablines .line{border-color:var(--line)}
+.tablines .line .nm small{color:var(--muted)}
+.tablines .qty button{background:var(--raise);border-color:var(--line);color:var(--fg)}
+.card .total{border-top-color:var(--fg)} .card .total b{color:var(--fg)}
+.note{background:var(--raise);border-radius:10px;padding:10px 14px;color:var(--fg)}
+
+/* Sheets */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.74);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:20}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;width:100%;max-width:460px;padding:22px;display:flex;flex-direction:column;gap:16px;max-height:100%;overflow-y:auto;box-sizing:border-box}
+.card h4{margin:0;font:700 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.due{font:700 58px/1 var(--display)}
+.tenders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tenders button{min-height:66px;border-radius:12px;border:1px solid #3a4a3b;background:#1e2a20;color:#dff3e2;font:700 24px var(--display)}
+.tenders button.exact{grid-column:1/-1;background:var(--fg);color:#000;border-color:var(--fg);font:700 20px var(--body)}
+.tenders button:disabled{opacity:.3;cursor:default}
+.tenders button.other{grid-column:1/-1;min-height:56px;background:var(--raise);color:var(--fg);border-color:var(--line);font:700 18px var(--body)}
+.entry{display:flex;align-items:baseline;justify-content:space-between;gap:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.entry b{font:700 52px/1 var(--display)}
+.entry span{font-weight:700;font-size:16px;color:var(--muted);text-align:right}
+.entry span.ok{color:var(--ok)}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.keypad button{min-height:60px;border-radius:12px;border:1px solid var(--line);background:var(--raise);color:var(--fg);font:700 26px var(--display)}
+.keypad button:disabled,.btn:disabled{opacity:.35;cursor:default}
+.change{background:#13241a;border:1px solid #23402c;border-radius:14px;padding:16px;text-align:center}
+.change small{display:block;color:#9fd2ad;font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:12px}
+.change b{font:700 68px/1.1 var(--display);color:var(--ok)}
+.btn{min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--raise);font-weight:700;font-size:16px;padding:0 16px}
+.btn.primary{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+.btn.danger{background:#4a1f1f;border-color:#6a2a2a;color:#ffd3d3}
+.err{color:var(--bad);font-size:14px;margin:0}
+
+/* Today + Inventory */
+.page{flex:1;overflow-y:auto;padding-block:20px 36px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.stat small{display:block;color:var(--muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
+.stat b{font:700 32px var(--display)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row .sp{flex:1}
+h2.sec{margin:0;font:700 24px var(--display)}
+.muted{color:var(--muted);margin:0;line-height:1.5}
+.tickets{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tk{display:grid;grid-template-columns:72px 1fr auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tk:last-child{border-bottom:0}
+.tk .t{color:var(--muted);font-family:var(--mono);font-size:13px}
+.tk .it{min-width:0;line-height:1.35}
+.tk .amt{font:700 18px var(--display)}
+.tk button{min-height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--raise);font-size:13px;font-weight:600}
+.tk button.arm{background:#4a1f1f;border-color:#6a2a2a;color:#ffd3d3}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);background:var(--panel);position:sticky;top:0}
+tr.grp td{background:var(--bg);color:var(--brass);font:700 16px var(--display);text-align:left}
+td .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.low{background:#3d2c10;color:var(--warn)} .pill.out{background:#3d1717;color:var(--bad)} .pill.nc{background:var(--raise);color:var(--muted)}
+td button{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--raise);font-size:13px;font-weight:600}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.field input{font:600 20px var(--body);padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-height:52px;width:100%;box-sizing:border-box;user-select:text}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#000;padding:8px 8px 8px 18px;border-radius:999px;font-weight:700;z-index:30;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);box-sizing:border-box}
+.toast:not(:has(button)){padding:12px 18px}
+.toast button{border:0;border-radius:999px;background:#000;color:var(--fg);font-weight:700;min-height:40px;padding:0 16px;flex-shrink:0}
+
+@media (max-width:900px) and (min-width:761px){ .rail{width:310px} nav button{padding:0 12px} .shift .tabsum{display:none} }
+@media (max-width:760px){
+  header{display:grid;grid-template-columns:1fr auto;row-gap:8px;column-gap:10px;padding-block:8px 10px}
+  .logo{height:28px}
+  nav{grid-column:1/-1;order:3;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  nav button{padding:0 4px;min-height:40px;justify-content:center;font-size:14px}
+  .shift{margin-left:0;gap:10px}
+  .shift b{font-size:19px} .shift small{font-size:10px}
+  .shift .tabsum{padding-left:10px;font-size:12px}
+  .banner{font-size:13px;padding-block:6px}
+  main{flex-direction:column}
+  #v-register{flex-direction:column}
+  .menu{min-height:0;flex:1 1 0}
+  .cats{padding:8px 12px 4px max(12px,env(safe-area-inset-left,0px))} .cats button{min-height:44px;font-size:16px;max-width:none}
+  .grid{padding:8px 12px 16px max(12px,env(safe-area-inset-left,0px));gap:16px}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+  .tile{min-height:80px;padding:10px 10px 12px;gap:6px} .tile .n{font-size:14.5px} .tile .foot{flex-wrap:wrap}
+  .ltile .pair button{min-height:48px}
+  .rail{width:auto;flex:0 0 auto;border-left:0;border-top:1px solid var(--hair);gap:8px;padding:8px max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+  .ticket{flex:0 1 auto;padding:8px 12px 10px}
+  .ticket .thead{display:none}
+  .lines{flex:0 1 auto;max-height:17vh}
+  .ticket .empty{padding:6px}
+  .line{padding:4px 0}
+  .qty button{width:36px;height:36px}
+  .total{padding:6px 0 0} .total b{font-size:26px}
+  .charge,.totab{min-height:54px}
+  .stats{grid-template-columns:1fr 1fr}
+  .datatools .btn{min-height:44px;font-size:14px;padding:0 12px}
+  .tk{grid-template-columns:56px 1fr auto}
+  .tk button{grid-column:3}
+  .toast{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px))}
+}
+@media (prefers-reduced-motion:reduce){.tile,.ltile .pair button,.tabcard{transition:none}.tile:active,.ltile .pair button:active,.tabcard:active{transform:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="logo.png" alt="The Mini Bar POS" width="156" height="38">
+  <nav aria-label="Screens">
+    <button id="nav-register" data-view="register" aria-current="page">Register</button>
+    <button id="nav-tabs" data-view="tabs">Tabs<span id="tab-badge" class="badge num" hidden>0</span></button>
+    <button id="nav-today" data-view="today">Today</button>
+    <button id="nav-inventory" data-view="inventory">Inventory</button>
+  </nav>
+  <div class="shift"><div class="blk"><small>Shift · <span id="shift-count" class="num">0</span> orders</small><b id="shift-total" class="num">$0</b></div><div id="tab-sum" class="tabsum num" hidden></div></div>
+</header>
+<div id="banner" class="banner" hidden></div>
+
+<main>
+  <section id="v-register" class="view">
+    <div class="menu">
+      <div class="cats" role="group" aria-label="Category">
+        <button id="cat-beer" data-cat="beer" aria-pressed="true">Beer <span id="cn-beer" class="num"></span></button>
+        <button id="cat-liquor" data-cat="liquor" aria-pressed="false">Liquor <span id="cn-liquor" class="num"></span></button>
+        <button id="cat-wine" data-cat="wine" aria-pressed="false">Wine <span id="cn-wine" class="num"></span></button>
+      </div>
+      <div id="grid" class="grid"><p class="empty">Loading the menu…</p></div>
+    </div>
+    <aside class="rail" aria-label="Current order">
+      <div class="railhead"><h3>Current order</h3><span class="railtools"><button id="undo-last" type="button" disabled>Undo last</button><button id="clear-order" type="button" disabled>Clear</button></span></div>
+      <div id="tabmode" class="tabmode-bar" hidden><span><small>Adding drinks to tab</small><b id="tabmode-name"></b></span><button id="tabmode-cancel" type="button">Cancel</button></div>
+      <div class="ticket" id="ticket">
+        <div class="thead"><span>The Mini Bar · Cash only</span><span id="ticket-time" class="num"></span></div>
+        <div id="lines" class="lines"></div>
+        <div class="total"><span>Total</span><b id="order-total" class="num">$0</b></div>
+      </div>
+      <div class="payrow">
+        <button id="to-tab" class="totab" type="button" disabled>Add to tab</button>
+        <button id="charge" class="charge" type="button" disabled>Cash</button>
+      </div>
+    </aside>
+  </section>
+
+  <section id="v-tabs" class="view" hidden>
+    <div class="page"><div class="wrap" id="tabs"></div></div>
+  </section>
+
+  <section id="v-today" class="view" hidden>
+    <div class="page"><div class="wrap" id="today"></div></div>
+  </section>
+
+  <section id="v-inventory" class="view" hidden>
+    <div class="page"><div class="wrap" id="inventory"></div></div>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const GROUPS = {
+  beer: ["$2 Domestic","$4 Premium","$4 Craft","$5 Seltzer & Specialty"],
+  liquor: ["Well","Call","Top Shelf"],
+  wine: ["Wine"]
+};
+function groupsFor(cat){
+  const seen = new Map();
+  for (const p of S.products){
+    if (p.cat !== cat || p.active === false) continue;
+    const legacy = (GROUPS[cat]||[]).indexOf(p.group);
+    const rank = legacy >= 0 ? legacy : 100 + (num(p.sort)||0);
+    if (!seen.has(p.group) || seen.get(p.group) > rank) seen.set(p.group, rank);
+  }
+  return [...seen.entries()].sort((a,b)=>a[1]-b[1]).map(e=>e[0]);
+}
+const S = {products:[], tickets:[], closeouts:[], tabs:[], order:[], view:"register", cat:"beer", db:null, dl:null, pay:null, armed:null, closing:false, loaded:false, tabOpen:null, tabArmed:null, hist:[], clearArmed:false, target:null};
+const $ = id => document.getElementById(id);
+
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)){
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()){ if (c == null || c === false) continue; el.append(c.nodeType ? c : String(c)); }
+  return el;
+}
+const money = n => { n = Math.round((Number(n)||0)*100)/100; return "$" + (Number.isInteger(n) ? n : n.toFixed(2)); };
+const num = v => (typeof v === "number" && isFinite(v)) ? v : null;
+const clock = iso => { try { return new Date(iso).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); } catch(e){ return ""; } };
+const dayStr = iso => { try { return new Date(iso).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"}); } catch(e){ return ""; } };
+function toast(msg, label, action){
+  const t=$("toast"); t.replaceChildren(h("span",null,msg));
+  if (label && action) t.append(h("button",{type:"button",onclick:()=>{ t.hidden=true; clearTimeout(toast.t); action(); }},label));
+  t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true, label ? 7000 : 1800);
+}
+function banner(msg){ const b=$("banner"); b.textContent=msg||""; b.hidden=!msg; }
+
+/* ---------- sold / remaining ---------- */
+function soldUnits(id){
+  let n = 0;
+  for (const c of S.closeouts){ const v = c.counts && num(c.counts[id]); if (v) n += v; }
+  return n + shiftUnits(id);
+}
+/* Drinks on an open tab are already poured, so they count as sold. */
+function shiftUnits(id){ let n=0; for (const t of S.tickets.concat(S.tabs)) for (const it of (t.items||[])) if (it.id===id) n += num(it.qty)||0; return n; }
+const itemsTotal = items => Math.round((items||[]).reduce((s,i)=>s+(num(i.price)||0)*(num(i.qty)||0),0)*100)/100;
+const itemsCount = items => (items||[]).reduce((s,i)=>s+(num(i.qty)||0),0);
+/* Sold since the last count: a recount or an import sets soldBase to the sold total at that moment. */
+function soldSince(p){ return Math.max(0, soldUnits(p.id) - (num(p.soldBase)||0)); }
+function unitCost(p){ const c = num(p && p.cost); if (c == null) return null; return p.unit === "bottle" && num(p.pours) ? c / p.pours : c; }
+function remaining(p){
+  const start = num(p.start); if (start == null) return null;
+  const rec = num(p.received)||0, sold = soldSince(p);
+  return p.unit === "bottle" && num(p.pours) ? start + rec - sold/p.pours : start + rec - sold;
+}
+function stockLevel(p){
+  const r = remaining(p); if (r == null) return "nc";
+  if (r <= 0) return "out";
+  const lowAt = p.unit === "bottle" ? 0.5 : 6;
+  return r <= lowAt ? "low" : "ok";
+}
+function leftText(p){
+  const r = remaining(p); if (r == null) return "";
+  if (p.unit === "bottle") return (Math.max(0,r)).toFixed(1) + " bottles left";
+  return Math.max(0,Math.floor(r)) + " left";
+}
+
+/* ---------- order ---------- */
+function addItem(p, v){
+  const price = p.cat === "liquor" ? num(v === "mixed" ? p.mixed : p.shot) : num(p.price);
+  if (price == null) { toast("Set a price for " + p.name + " in Inventory"); return; }
+  const key = p.id + "|" + (v||"");
+  const ex = S.order.find(l => l.key === key);
+  if (ex) ex.qty++; else S.order.push({key, id:p.id, name:p.name, v:v||null, price, qty:1});
+  S.hist.push(key); S.clearArmed=false;
+  saveDraft(); renderOrder(); wake();
+}
+function changeQty(key, d){
+  const l = S.order.find(x=>x.key===key); if (!l) return;
+  l.qty += d; if (l.qty <= 0) S.order = S.order.filter(x=>x.key!==key);
+  saveDraft(); renderOrder();
+}
+const orderTotal = () => S.order.reduce((s,l)=>s+l.price*l.qty,0);
+function saveDraft(){ try{ localStorage.setItem("mb-draft", JSON.stringify(S.order)); }catch(e){} }
+function loadDraft(){ try{ const d = JSON.parse(localStorage.getItem("mb-draft")||"[]"); if (Array.isArray(d)) S.order = d.filter(l=>l && l.key && num(l.price)!=null && num(l.qty)); }catch(e){} }
+
+/* ---------- render: register ---------- */
+function tierClass(price){ return price >= 5 ? "t5" : price >= 4 ? "t4" : ""; }
+function gauge(p){
+  const r = remaining(p); if (r == null) return null;
+  const full = (num(p.start)||0) + (num(p.received)||0); if (!full) return null;
+  const pct = Math.max(0, Math.min(100, r/full*100)), lvl = stockLevel(p);
+  return h("span",{class:"gauge " + (lvl==="ok"?"":lvl),"aria-hidden":"true"}, h("i",{style:"width:"+pct.toFixed(1)+"%"}));
+}
+function renderGrid(){
+  for (const c of ["beer","liquor","wine"]){ const el=$("cn-"+c); if (el) el.textContent = S.loaded ? String(S.products.filter(p=>p.cat===c && p.active!==false).length || "") : ""; }
+  const g = $("grid"); g.replaceChildren();
+  if (!S.loaded){ g.append(h("p",{class:"empty"},"Loading the menu…")); return; }
+  const list = S.products.filter(p => p.cat === S.cat && p.active !== false);
+  if (!list.length){ g.append(h("p",{class:"empty"}, S.db ? "No items in this category yet. Add them from Inventory." : "The menu can't load without the bar's saved data.")); return; }
+  for (const grp of groupsFor(S.cat)){
+    const items = list.filter(p=>p.group===grp).sort((a,b)=>(a.sort||0)-(b.sort||0));
+    if (!items.length) continue;
+    let tag = null;
+    if (S.cat === "liquor"){ const f = items[0]; tag = h("span",{class:"chip num " + tierClass(f.shot>=7?5:f.shot>=5?4:2)}, money(f.shot) + " / " + money(f.mixed)); }
+    else { const ps=[...new Set(items.map(p=>p.price))]; if (ps.length===1) tag = h("span",{class:"chip num " + tierClass(ps[0])}, money(ps[0])); }
+    const label = grp.replace(/^\$\d+ /,"");
+    const tiles = h("div",{class:"tiles"});
+    for (const p of items){
+      const lvl = stockLevel(p), lt = leftText(p);
+      const leftEl = lt ? h("span",{class:"left " + (lvl==="ok"?"":lvl)}, lvl==="out" ? "Out by count" : lt) : null;
+      if (p.cat === "liquor"){
+        tiles.append(h("div",{class:"ltile"},
+          h("div",{class:"top"}, h("span",{class:"n"}, p.name), leftEl),
+          h("div",{class:"pair"},
+            h("button",{type:"button","aria-label":p.name+" shot "+money(p.shot), onclick:()=>addItem(p,"shot")}, h("small",null,"Shot"), h("b",{class:"num"},money(p.shot))),
+            h("button",{type:"button","aria-label":p.name+" mixed "+money(p.mixed), onclick:()=>addItem(p,"mixed")}, h("small",null,"Mixed"), h("b",{class:"num"},money(p.mixed)))
+          ), gauge(p)));
+      } else {
+        tiles.append(h("button",{type:"button", class:"tile" + (lvl==="out"?" isout":""), onclick:()=>addItem(p)},
+          h("span",{class:"n"}, p.name),
+          h("span",{class:"foot"}, h("span",{class:"chip num " + tierClass(p.price)}, money(p.price)), leftEl),
+          gauge(p)));
+      }
+    }
+    g.append(h("div",{class:"group"}, h("h2",null, label, tag), tiles));
+  }
+}
+function renderOrder(){
+  const box = $("lines"); box.replaceChildren();
+  if (!S.order.length) box.append(h("p",{class:"empty"},"Tap drinks to start an order."));
+  for (const l of S.order){
+    box.append(h("div",{class:"line"},
+      h("div",{class:"qty"},
+        h("button",{type:"button","aria-label":"Remove one "+l.name, onclick:()=>changeQty(l.key,-1)},"−"),
+        h("b",{class:"num"}, l.qty),
+        h("button",{type:"button","aria-label":"Add one "+l.name, onclick:()=>changeQty(l.key,1)},"+")),
+      h("div",{class:"nm"}, l.name, h("small",{class:"num"}, (l.v ? (l.v==="mixed"?"Mixed":"Shot")+" · " : "") + money(l.price)+" ea")),
+      h("span",{class:"amt num"}, money(l.price*l.qty))
+    ));
+  }
+  const tt = $("ticket-time"); if (tt) tt.textContent = S.order.length ? clock(new Date().toISOString()) : "";
+  const t = orderTotal();
+  $("order-total").textContent = money(t);
+  const tgt = S.target ? S.tabs.find(x=>x.id===S.target) : null;
+  if (S.target && !tgt && S.loaded){ S.target = null; } /* the tab was closed elsewhere */
+  const c = $("charge"), tb = $("to-tab");
+  $("tabmode").hidden = !tgt; $("ticket").classList.toggle("tabmode", !!tgt);
+  if (tgt){
+    const nm = String(tgt.name||"Tab");
+    $("tabmode-name").textContent = nm + " · " + money(itemsTotal(tgt.items)) + " so far";
+    c.disabled = !S.order.length; c.textContent = S.order.length ? "Add to " + nm + " · " + money(t) : "Tap drinks to add";
+    tb.disabled = false; tb.textContent = "Back to tab";
+  } else {
+    c.disabled = !S.order.length; c.textContent = S.order.length ? "Cash · " + money(t) : "Cash";
+    tb.disabled = !S.order.length; tb.textContent = "Add to tab";
+  }
+  S.hist = S.hist.filter(k=>S.order.some(l=>l.key===k));
+  const u = $("undo-last"); u.disabled = !S.hist.length && !S.order.length;
+  const last = S.order.find(l=>l.key===(S.hist[S.hist.length-1] || (S.order[S.order.length-1]||{}).key));
+  u.setAttribute("aria-label", last ? "Undo last: remove one " + last.name : "Undo last");
+  const c2 = $("clear-order"); c2.disabled = !S.order.length; c2.className = S.clearArmed ? "arm" : ""; c2.textContent = S.clearArmed ? "Tap to clear all" : "Clear";
+}
+function undoLast(){
+  const key = S.hist.pop() || (S.order[S.order.length-1]||{}).key;
+  if (!key) return;
+  const l = S.order.find(x=>x.key===key); if (!l) return;
+  S.clearArmed=false; changeQty(key, -1); toast("Removed 1 " + l.name);
+}
+function clearOrder(){
+  if (!S.order.length) return;
+  if (!S.clearArmed){ S.clearArmed = true; renderOrder(); clearTimeout(clearOrder.t); clearOrder.t = setTimeout(()=>{ S.clearArmed=false; renderOrder(); }, 3500); return; }
+  const saved = S.order.map(l=>Object.assign({},l));
+  S.order=[]; S.hist=[]; S.clearArmed=false; saveDraft(); renderOrder();
+  toast("Order cleared", "Undo", ()=>{ S.order = saved; saveDraft(); renderOrder(); });
+}
+function renderShift(){
+  const tot = S.tickets.reduce((s,t)=>s+(num(t.total)||0),0);
+  $("shift-total").textContent = money(tot);
+  $("shift-count").textContent = S.tickets.length;
+  const tabTot = S.tabs.reduce((s,t)=>s+itemsTotal(t.items),0);
+  const ts = $("tab-sum"); ts.hidden = !S.tabs.length; ts.replaceChildren(h("span",null,"Open tabs"), S.tabs.length + " · " + money(tabTot));
+  const b = $("tab-badge"); b.hidden = !S.tabs.length; b.textContent = S.tabs.length;
+}
+
+/* ---------- tabs ---------- */
+function mergeItems(base, add){
+  const out = (base||[]).map(i=>Object.assign({}, i));
+  for (const l of add){
+    const key = l.key || (l.id + "|" + (l.v||""));
+    const ex = out.find(i => (i.key || (i.id+"|"+(i.v||""))) === key && num(i.price) === l.price);
+    if (ex) ex.qty = (num(ex.qty)||0) + l.qty;
+    else out.push({key, id:l.id, name:l.name, v:l.v||null, qty:l.qty, price:l.price});
+  }
+  return out;
+}
+function openTabPicker(){
+  if (!S.order.length) return;
+  if (!S.db){ toast("Tabs can't be saved right now"); return; }
+  S.pay = null; S.tabOpen = null;
+  const t = orderTotal();
+  const err = h("p",{class:"err",hidden:true});
+  const tabs = [...S.tabs].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const nameIn = h("input",{id:"new-tab-name",type:"text",maxlength:"40",autocomplete:"off",placeholder:"Name or description"});
+  const start = async () => {
+    const name = nameIn.value.trim();
+    if (!name){ err.textContent = "Type a name for the tab, like Mike or Red hat."; err.hidden=false; nameIn.focus(); return; }
+    await addOrderToTab(null, name, err);
+  };
+  nameIn.addEventListener("keydown", e=>{ if (e.key==="Enter"){ e.preventDefault(); start(); } });
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Add to a tab"},
+    h("h4",null,"Add " + itemsCount(S.order) + " drink" + (itemsCount(S.order)===1?"":"s") + " to a tab"),
+    h("div",{class:"due num"}, money(t)),
+    tabs.length ? h("div",{class:"picklist"}, tabs.map(tb=>h("button",{type:"button",onclick:()=>addOrderToTab(tb.id,null,err)},
+      h("b",null,String(tb.name||"Tab")), h("small",{class:"num"}, money(itemsTotal(tb.items)) + " so far")))) : null,
+    h("div",{class:"newtab"}, h("div",{class:"field"}, h("label",{for:"new-tab-name"}, tabs.length ? "Or start a new tab" : "Start a new tab"), nameIn),
+      h("button",{type:"button",class:"btn primary",onclick:start},"Start tab")),
+    err,
+    h("button",{type:"button",class:"btn",onclick:closeSheet},"Back to order"));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+async function addOrderToTab(tabId, newName, err){
+  if (addOrderToTab.busy) return; addOrderToTab.busy = true;
+  const lines = S.order.map(l=>Object.assign({}, l)), amt = orderTotal();
+  try {
+    let name, undo;
+    if (tabId){
+      const tb = S.tabs.find(x=>x.id===tabId); if (!tb) throw {code:"gone"};
+      name = tb.name;
+      const before = (tb.items||[]).map(i=>Object.assign({},i)), after = mergeItems(tb.items, lines);
+      await withRetry(()=>S.db.doc("tabs/"+tabId).update({items: after, updatedAt:new Date().toISOString()}));
+      undo = () => { const cur = S.tabs.find(x=>x.id===tabId); if (!cur) throw {code:"gone"}; return S.db.doc("tabs/"+tabId).update({items: before, updatedAt:new Date().toISOString()}); };
+    } else {
+      name = newName;
+      const ref = S.db.collection("tabs").doc();
+      await withRetry(()=>ref.set({name:newName, openedAt:new Date().toISOString(), updatedAt:new Date().toISOString(), items: mergeItems([], lines)}));
+      undo = () => S.db.doc("tabs/"+ref.id).delete();
+    }
+    const fromTab = S.target === tabId && tabId;
+    S.order = []; S.hist = []; S.target = null; saveDraft(); renderOrder(); closeSheet();
+    if (fromTab){ show("tabs"); S.tabOpen = tabId; S.tabArmed = null; renderTabSheet(); }
+    toast("Added " + money(amt) + " to " + name + "'s tab", "Undo", async ()=>{
+      try { await withRetry(undo); S.order = lines; saveDraft(); renderOrder(); toast("Taken off " + name + "'s tab"); }
+      catch(e){ toast(e && e.code==="gone" ? "That tab was already closed" : "Couldn't undo. Fix it on the Tabs screen."); }
+    });
+  } catch(e){
+    const msg = e && e.code==="gone" ? "That tab was just closed. Pick another or start a new one." : "Couldn't save to the tab. Check the Wi-Fi and try again.";
+    if (e && e.code==="gone" && S.target === tabId){ S.target = null; renderOrder(); }
+    if (err){ err.textContent = msg; err.hidden = false; } else toast(msg);
+  } finally { addOrderToTab.busy = false; }
+}
+function renderTabs(){
+  const w = $("tabs"); w.replaceChildren();
+  const tabs = [...S.tabs].sort((a,b)=>String(a.openedAt).localeCompare(String(b.openedAt)));
+  const tot = tabs.reduce((s,t)=>s+itemsTotal(t.items),0);
+  w.append(h("div",{class:"stats"},
+    h("div",{class:"stat"},h("small",null,"Open tabs"),h("b",{class:"num"},tabs.length)),
+    h("div",{class:"stat"},h("small",null,"Owed on tabs"),h("b",{class:"num"},money(tot))),
+    h("div",{class:"stat"},h("small",null,"Drinks on tabs"),h("b",{class:"num"},tabs.reduce((s,t)=>s+itemsCount(t.items),0)))));
+  w.append(h("p",{class:"muted"},"Tap a tab to add drinks, change it, or close it out. You can also ring drinks on the Register and tap Add to tab."));
+  if (!tabs.length){ w.append(h("p",{class:"empty"},"No open tabs. Start one from the Register with Add to tab.")); return; }
+  w.append(h("div",{class:"tabgrid"}, tabs.map(t=>h("button",{type:"button",class:"tabcard",onclick:()=>{S.tabOpen=t.id; S.tabArmed=null; renderTabSheet();}},
+    h("span",{class:"nm"}, String(t.name||"Tab")),
+    h("span",{class:"amt num"}, money(itemsTotal(t.items))),
+    h("span",{class:"meta num"}, itemsCount(t.items) + " drinks · opened " + clock(t.openedAt))))));
+}
+function renderTabSheet(){
+  const t = S.tabs.find(x=>x.id===S.tabOpen);
+  if (!t){ if (S.tabOpen){ closeSheet(); toast("That tab is closed"); } return; }
+  const items = t.items||[], total = itemsTotal(items);
+  const lines = h("div",{class:"tablines"});
+  if (!items.length) lines.append(h("p",{class:"empty"},"Nothing on this tab."));
+  items.forEach((i,idx)=>lines.append(h("div",{class:"line"},
+    h("div",{class:"qty"},
+      h("button",{type:"button","aria-label":"Take one "+i.name+" off the tab",onclick:()=>tabChangeOne(t,idx,-1)},"−"),
+      h("b",{class:"num"}, num(i.qty)||0),
+      h("button",{type:"button","aria-label":"Add another "+i.name+" to the tab",onclick:()=>tabChangeOne(t,idx,1)},"+")),
+    h("div",{class:"nm"}, String(i.name||""), h("small",{class:"num"},(i.v?(i.v==="mixed"?"Mixed":"Shot")+" · ":"")+money(i.price)+" ea")),
+    h("span",{class:"amt num"}, money((num(i.price)||0)*(num(i.qty)||0))))));
+  const armed = S.tabArmed === t.id;
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Tab for "+String(t.name||"")},
+    h("h4",{class:"num"},"Tab · opened " + clock(t.openedAt)),
+    h("div",{class:"due",style:"font-size:36px;overflow-wrap:anywhere"}, String(t.name||"Tab")),
+    lines,
+    h("div",{class:"total",style:"padding-inline:0"}, h("span",null,"Tab total"), h("b",{class:"num"},money(total))),
+    h("button",{type:"button",class:"btn",id:"add-drinks",style:"min-height:60px;font-size:18px",onclick:()=>startAddingTo(t)},"+ Add drinks to " + String(t.name||"this tab")),
+    items.length ? h("button",{type:"button",class:"btn primary",id:"close-tab",style:"min-height:64px;font-size:20px",onclick:()=>{
+        S.pay = {total, state:"due", err:"", tabId:t.id, tabName:String(t.name||""), items:items.map(i=>Object.assign({},i))}; renderPay(); }},
+      "Close out · " + money(total)) :
+      h("button",{type:"button",class:"btn "+(armed?"danger":""),onclick:()=>deleteEmptyTab(t)}, armed?"Tap again to delete":"Delete empty tab"),
+    h("button",{type:"button",class:"btn",onclick:closeSheet},"Back"));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+function startAddingTo(t){
+  S.target = t.id; closeSheet(); show("register");
+  toast("Tap drinks, then Add to " + String(t.name||"tab"));
+}
+function stopAdding(){
+  const back = S.target; S.target = null; renderOrder();
+  if (back && S.tabs.some(x=>x.id===back)){ show("tabs"); S.tabOpen = back; renderTabSheet(); }
+}
+async function tabChangeOne(t, idx, d){
+  const items = (t.items||[]).map(i=>Object.assign({},i));
+  if (!items[idx]) return;
+  items[idx].qty = (num(items[idx].qty)||0) + d;
+  if (items[idx].qty <= 0) items.splice(idx,1);
+  try { await withRetry(()=>S.db.doc("tabs/"+t.id).update({items, updatedAt:new Date().toISOString()})); }
+  catch(e){ toast("Couldn't change the tab. Try again."); }
+}
+async function deleteEmptyTab(t){
+  if (S.tabArmed !== t.id){ S.tabArmed = t.id; renderTabSheet(); return; }
+  try { await withRetry(()=>S.db.doc("tabs/"+t.id).delete()); closeSheet(); toast("Tab deleted"); }
+  catch(e){ toast("Couldn't delete the tab. Try again."); }
+}
+
+/* ---------- pay ---------- */
+function openPay(){
+  if (!S.order.length) return;
+  if (!S.db){ toast("Sales can't be saved right now"); return; }
+  S.pay = {total: orderTotal(), state:"due", err:""}; renderPay();
+}
+function renderPay(){
+  const sh = $("sheet");
+  if (!S.pay){ sh.hidden = true; sh.replaceChildren(); return; }
+  const P = S.pay, card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Take cash"});
+  if (P.state === "done"){
+    card.append(...[h("h4",null,(P.tabId ? P.tabName + "'s tab closed · " : "Sale saved · ") + money(P.total)),
+      h("div",{class:"change"}, h("small",null,"Change due"), h("b",{class:"num"}, money(P.change))),
+      P.err ? h("p",{class:"err"},P.err) : null,
+      h("div",{class:"row"},
+        h("button",{type:"button",class:"btn",id:"undo-sale",onclick:undoSale}, P.tabId ? "Undo, reopen tab" : "Undo sale"),
+        h("span",{class:"sp"}),
+        h("button",{type:"button",class:"btn primary",id:"next-order",style:"flex:1",onclick:()=>{S.pay=null;renderPay();}}, P.tabId ? "Done" : "Next order"))].filter(Boolean));
+  } else if (P.mode === "keypad"){
+    const amt = entryAmount(P.entry), short = Math.round((P.total - amt)*100)/100, busy = P.state === "saving";
+    const key = k => h("button",{type:"button",class:"num","aria-label":k==="del"?"Delete":k,disabled:busy,onclick:()=>keyIn(k)}, k==="del" ? "⌫" : k);
+    card.append(...[h("h4",null,"Amount due · " + money(P.total)),
+      h("h4",null,"Cash handed over"),
+      h("div",{class:"entry","aria-live":"polite"}, h("b",{class:"num",id:"cash-entry"}, P.entry ? "$" + P.entry : "$0"),
+        h("span",{class:short<=0 && P.entry ? "ok" : null}, !P.entry ? "Type the amount" : short > 0 ? money(short) + " short" : "Change " + money(-short))),
+      h("div",{class:"keypad"}, ["1","2","3","4","5","6","7","8","9",".","0","del"].map(key)),
+      P.err ? h("p",{class:"err"},P.err) : null,
+      h("div",{class:"row"},
+        h("button",{type:"button",class:"btn",disabled:busy,onclick:()=>{ P.mode=null; P.err=""; renderPay(); }},"Back"),
+        h("span",{class:"sp"}),
+        h("button",{type:"button",class:"btn primary",id:"take-cash",style:"flex:1",disabled:busy || !P.entry || short > 0,onclick:()=>tender(amt)}, P.entry && short <= 0 ? "Take " + money(amt) : "Take cash"))].filter(Boolean));
+  } else {
+    const bills = [5,10,20,50,100].filter(b=>b>P.total);
+    const t = h("div",{class:"tenders"},
+      h("button",{type:"button",class:"exact",disabled:P.state==="saving",onclick:()=>tender(P.total)},"Exact cash · " + money(P.total)),
+      bills.slice(0,5).map(b=>h("button",{type:"button",class:"num",disabled:P.state==="saving",onclick:()=>tender(b)}, money(b))),
+      h("button",{type:"button",class:"other",id:"other-amount",disabled:P.state==="saving",onclick:()=>{ P.mode="keypad"; P.entry=""; P.err=""; renderPay(); }},"Other amount"));
+    card.append(...[h("h4",null,P.tabId ? "Close " + P.tabName + "'s tab" : "Amount due"), h("div",{class:"due num"}, money(P.total)), h("h4",null,"Cash handed over"), t,
+      P.err ? h("p",{class:"err"},P.err) : null,
+      h("button",{type:"button",class:"btn",onclick:()=>{ const back = P.tabId; S.pay=null; if (back){ S.tabOpen=back; renderTabSheet(); } else renderPay(); }}, P.tabId ? "Back to tab" : "Back to order")].filter(Boolean));
+  }
+  sh.replaceChildren(card); sh.hidden = false;
+}
+/* Keypad entry is a dollars string like "23" or "23.5": at most 4 digits before the point and 2 after. */
+const entryAmount = s => Math.round((parseFloat(s) || 0)*100)/100;
+function keyIn(k){
+  const P = S.pay; if (!P || P.state === "saving") return;
+  let s = P.entry || "";
+  if (k === "del") s = s.slice(0,-1);
+  else if (k === ".") { if (!s.includes(".")) s = (s || "0") + "."; }
+  else {
+    const [whole, cents] = s.split(".");
+    if (cents !== undefined) { if (cents.length < 2) s += k; }
+    else if (whole === "0") s = k;
+    else if (whole.length < 4) s += k;
+  }
+  P.entry = s; renderPay();
+}
+async function tender(amount){
+  const P = S.pay; if (!P || P.state === "saving") return;
+  P.state = "saving"; P.err = ""; renderPay();
+  const src = P.tabId ? P.items : S.order;
+  const sale = {
+    at: new Date().toISOString(),
+    items: src.map(l=>({id:l.id, name:l.name, v:l.v||null, qty:l.qty, price:l.price})),
+    total: Math.round(P.total*100)/100,
+    tendered: amount
+  };
+  if (P.tabId) sale.tab = P.tabName;
+  /* One id per close-out, so a retry after a dropped connection can't record the tab twice. */
+  const ref = S.db.collection("tickets").doc(P.ticketId || (P.ticketId = S.db.collection("tickets").doc().id));
+  try { await withRetry(()=>ref.set(sale)); }
+  catch(e){ P.state="due"; P.err = e && e.code==="quota_exceeded" ? "Storage is full. Close the shift on the Today screen, then try again." : "Couldn't save the sale. Check the Wi-Fi and tap again."; renderPay(); return; }
+  P.change = Math.round((amount - P.total)*100)/100; P.state = "done";
+  P.undoOrder = P.tabId ? null : S.order.map(l=>Object.assign({},l));
+  if (P.tabId){
+    const tb = S.tabs.find(x=>x.id===P.tabId);
+    P.tabDoc = tb ? {name: tb.name, openedAt: tb.openedAt, updatedAt: new Date().toISOString(), items: (tb.items||[]).map(i=>Object.assign({},i))} : null;
+    S.tabOpen = null;
+    try { await withRetry(()=>S.db.doc("tabs/"+P.tabId).delete()); }
+    catch(e){ P.err = "The sale is saved, but the tab is still showing. Delete it from the Tabs screen."; }
+  } else { S.order = []; S.hist = []; saveDraft(); renderOrder(); }
+  renderPay();
+}
+async function undoSale(){
+  const P = S.pay; if (!P || P.state !== "done" || P.undoing) return;
+  P.undoing = true;
+  try {
+    await withRetry(()=>S.db.doc("tickets/"+P.ticketId).delete());
+    if (P.tabId && P.tabDoc) await withRetry(()=>S.db.doc("tabs/"+P.tabId).set(P.tabDoc));
+    if (P.undoOrder){ S.order = P.undoOrder; saveDraft(); renderOrder(); }
+    S.pay = null; renderPay();
+    toast(P.tabId ? P.tabName + "'s tab is open again" : "Sale undone. The order is back.");
+  } catch(e){ P.undoing = false; P.err = "Couldn't undo. Void it on the Today screen."; renderPay(); }
+}
+async function withRetry(fn){
+  try { return await fn(); }
+  catch(e){ if (e && e.code === "unavailable"){ await new Promise(r=>setTimeout(r,400+Math.random()*600)); return fn(); } throw e; }
+}
+
+/* ---------- today ---------- */
+function shiftSummary(){
+  const items = {}, counts = {};
+  for (const t of S.tickets) for (const it of (t.items||[])){
+    const q = num(it.qty)||0;
+    counts[it.id] = (counts[it.id]||0) + q;
+    const k = it.id + (it.v ? "|"+it.v : "");
+    const r = items[k] || (items[k] = {id:it.id, name:String(it.name||""), v:it.v||null, qty:0, revenue:0});
+    r.qty += q; r.revenue += q*(num(it.price)||0);
+  }
+  return {items, counts};
+}
+function estProfit(tickets){
+  let cost = 0, known = 0, all = 0;
+  for (const t of tickets) for (const i of (t.items||[])){
+    const q = num(i.qty)||0, c = unitCost(S.products.find(p=>p.id===i.id)); all += q;
+    if (c != null){ cost += c*q; known += q; }
+  }
+  if (!known) return null;
+  const tot = tickets.reduce((s,t)=>s+(num(t.total)||0),0);
+  return h("div",{class:"stat"}, h("small",null,"Est. profit" + (known<all?" (partial)":"")), h("b",{class:"num"}, money(tot - cost)));
+}
+function renderToday(){
+  const w = $("today"); w.replaceChildren();
+  const tickets = [...S.tickets].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const tot = tickets.reduce((s,t)=>s+(num(t.total)||0),0);
+  const drinks = tickets.reduce((s,t)=>s+(t.items||[]).reduce((a,i)=>a+(num(i.qty)||0),0),0);
+  w.append(h("div",{class:"stats"},
+    h("div",{class:"stat"},h("small",null,"Cash in drawer (sales)"),h("b",{class:"num"},money(tot))),
+    h("div",{class:"stat"},h("small",null,"Orders"),h("b",{class:"num"},tickets.length)),
+    h("div",{class:"stat"},h("small",null,"Drinks sold"),h("b",{class:"num"},drinks)),
+    estProfit(tickets)));
+
+  const top = Object.values(shiftSummary().items).sort((a,b)=>b.qty-a.qty).slice(0,6);
+  if (top.length) w.append(h("p",{class:"muted"},"Top sellers: " + top.map(r=>r.name+(r.v?" ("+r.v+")":"")+" ×"+r.qty).join(" · ")));
+
+  const closeBtn = h("button",{type:"button",id:"close-shift",class:"btn " + (S.closing?"danger":"primary"),disabled:!tickets.length,onclick:closeShift},
+    S.closing ? "Tap again to close shift · " + money(tot) : "Close shift");
+  w.append(h("div",{class:"row"},h("h2",{class:"sec"},"This shift"),h("span",{class:"sp"}),
+    S.closing ? h("button",{type:"button",class:"btn",onclick:()=>{S.closing=false;renderToday();}},"Cancel") : null, closeBtn));
+  w.append(h("p",{class:"muted"},"Closing the shift saves today's totals, counts the drinks against inventory and starts a fresh shift. Count the drawer first; it should match the sales total."));
+  if (S.tabs.length){
+    const owed = S.tabs.reduce((s,t)=>s+itemsTotal(t.items),0);
+    w.append(h("p",{class:"note num"}, S.tabs.length + " tab" + (S.tabs.length===1?" is":"s are") + " still open (" + money(owed) + " owed). Close them out on the Tabs screen before closing the shift. Any left open carry over to the next shift and aren't in the drawer total."));
+  }
+
+  if (!tickets.length) w.append(h("p",{class:"empty"},"No sales yet this shift. Sales appear here as soon as you take cash on the Register."));
+  else {
+    const list = h("div",{class:"tickets"});
+    for (const t of tickets){
+      const armed = S.armed === t.id;
+      list.append(h("div",{class:"tk"},
+        h("span",{class:"t num"}, clock(t.at)),
+        h("span",{class:"it"}, (t.tab ? "Tab: " + String(t.tab) + " — " : "") + (t.items||[]).map(i=>(num(i.qty)||0)+"× "+String(i.name||"")+(i.v?" ("+i.v+")":"")).join(", ")),
+        h("span",{class:"amt num"}, money(t.total)),
+        h("button",{type:"button",class:armed?"arm":"",onclick:()=>voidTicket(t.id)}, armed ? "Confirm void" : "Void")));
+    }
+    w.append(list);
+  }
+
+  const past = [...S.closeouts].sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt))).slice(0,14);
+  if (past.length){
+    w.append(h("h2",{class:"sec"},"Past shifts"));
+    const tb = h("tbody");
+    for (const c of past) tb.append(h("tr",null, h("td",null,dayStr(c.closedAt)), h("td",{class:"num"},clock(c.openedAt)+" – "+clock(c.closedAt)), h("td",{class:"num"},num(c.tickets)||0), h("td",{class:"num"},money(c.total))));
+    w.append(h("div",{class:"tablebox"},h("table",null,h("thead",null,h("tr",null,h("th",null,"Day"),h("th",null,"Hours"),h("th",null,"Orders"),h("th",null,"Sales"))),tb)));
+  }
+}
+async function voidTicket(id){
+  if (S.armed !== id){ S.armed = id; renderToday(); clearTimeout(voidTicket.t); voidTicket.t=setTimeout(()=>{S.armed=null;renderToday();},4000); return; }
+  S.armed = null;
+  try { await withRetry(()=>S.db.doc("tickets/"+id).delete()); toast("Sale voided"); }
+  catch(e){ toast("Couldn't void. Try again."); }
+}
+async function closeShift(){
+  if (!S.tickets.length) return;
+  if (!S.closing){ S.closing = true; renderToday(); return; }
+  S.closing = false;
+  const tickets = [...S.tickets];
+  const {items, counts} = shiftSummary();
+  const ats = tickets.map(t=>String(t.at)).sort();
+  const total = Math.round(tickets.reduce((s,t)=>s+(num(t.total)||0),0)*100)/100;
+  const doc = {openedAt: ats[0], closedAt: new Date().toISOString(), tickets: tickets.length, total, counts, items:Object.values(items)};
+  try {
+    await withRetry(()=>S.db.collection("closeouts").doc().set(doc));
+  } catch(e){ toast("Couldn't close the shift. Try again."); renderToday(); return; }
+  for (const t of tickets){ try { await withRetry(()=>S.db.doc("tickets/"+t.id).delete()); } catch(e){} }
+  toast("Shift closed · " + money(total), "Back up now", backup);
+}
+
+/* ---------- inventory ---------- */
+function renderInventory(){
+  const w = $("inventory"); w.replaceChildren();
+  const low = S.products.filter(p=>["low","out"].includes(stockLevel(p)));
+  const nc = S.products.filter(p=>stockLevel(p)==="nc");
+  w.append(h("div",{class:"row"}, h("h2",{class:"sec"},"Inventory")));
+  w.append(h("div",{class:"row",style:"align-items:flex-start;gap:20px"},
+    h("div",{class:"toolgroup"}, h("small",null,"Menu"), h("div",{class:"datatools"},
+      h("button",{type:"button",class:"btn",id:"import-menu",onclick:pickImport},"Import menu"),
+      h("button",{type:"button",class:"btn",id:"menu-file",onclick:exportMenu},"Download menu file"))),
+    h("div",{class:"toolgroup"}, h("small",null,"Records"), h("div",{class:"datatools"},
+      h("button",{type:"button",class:"btn",id:"export",onclick:exportCsv},"Count sheet"),
+      h("button",{type:"button",class:"btn",id:"backup",onclick:backup},"Back up"),
+      h("button",{type:"button",class:"btn",id:"restore",onclick:pickRestore},"Restore"),
+      h("button",{type:"button",class:"btn",id:"start-fresh",onclick:startFresh},"Start fresh")))));
+  w.append(h("p",{class:"muted"},
+    "Left = last count + deliveries since − sold since. Tap Edit to recount an item or add a delivery. Beer and wine count by the can or bottle; liquor sells by the pour and counts down in bottles. " +
+    (low.length ? low.length + " running low. " : "") + (nc.length ? nc.length + " not counted yet." : "")));
+  const tb = h("tbody");
+  for (const cat of ["beer","liquor","wine"]) for (const grp of groupsFor(cat)){
+    const items = S.products.filter(p=>p.group===grp && p.cat===cat).sort((a,b)=>(a.sort||0)-(b.sort||0));
+    if (!items.length) continue;
+    tb.append(h("tr",{class:"grp"},h("td",{colspan:"7"},grp)));
+    for (const p of items){
+      const lvl = stockLevel(p), r = remaining(p), unit = p.unit==="bottle"?"btl":"";
+      const sold = soldSince(p), shift = shiftUnits(p.id);
+      const soldTxt = p.unit==="bottle" && p.pours ? sold + " pours" : String(sold);
+      const leftCell = r==null ? h("span",{class:"pill nc"},"Not counted")
+        : lvl==="ok" ? (p.unit==="bottle" ? Math.max(0,r).toFixed(1)+" btl" : String(Math.floor(r)))
+        : h("span",{class:"pill "+lvl}, (p.unit==="bottle" ? Math.max(0,r).toFixed(1)+" btl" : String(Math.max(0,Math.floor(r)))) + (lvl==="out"?" · out":" · low"));
+      tb.append(h("tr",null,
+        h("td",null,p.name),
+        h("td",{class:"num"}, num(p.start)==null ? "—" : p.start + (unit?" "+unit:"")),
+        h("td",{class:"num"}, num(p.received) ? p.received + (unit?" "+unit:"") : "—"),
+        h("td",{class:"num"}, soldTxt),
+        h("td",{class:"num"}, shift ? String(shift) : "—"),
+        h("td",{class:"num"}, leftCell),
+        h("td",null, h("button",{type:"button",onclick:()=>openEdit(p.id)},"Edit"))));
+    }
+  }
+  if (!S.products.length) w.append(h("p",{class:"empty"},"No menu yet. Tap Import menu and pick the menu spreadsheet."));
+  else w.append(h("div",{class:"tablebox"}, h("table",null,
+    h("thead",null,h("tr",null,h("th",null,"Item"),h("th",null,"Last count"),h("th",null,"Delivered since"),h("th",null,"Sold since"),h("th",null,"This shift"),h("th",null,"Left"),h("th",null,""))), tb)));
+}
+function openEdit(id){
+  const p = S.products.find(x=>x.id===id); if (!p) return;
+  const liquor = p.cat === "liquor", unit = p.unit === "bottle" ? "bottles" : "cans";
+  const rNow = remaining(p), nowLeft = rNow == null ? null : (p.unit === "bottle" ? Math.max(0,rNow).toFixed(1) : String(Math.max(0,Math.floor(rNow))));
+  const f = (idn, label, val, step) => h("div",{class:"field"}, h("label",{for:idn},label), h("input",{id:idn,type:"number",inputmode:"decimal",step:step||"1",min:"0",value:val==null?"":String(val)}));
+  const err = h("p",{class:"err",hidden:true});
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Edit "+p.name},
+    h("h4",null,"Edit item"), h("div",{class:"due",style:"font-size:32px"}, p.name),
+    h("div",{class:"fields"},
+      liquor ? [f("e-shot","Shot price ($)",p.shot,"0.5"), f("e-mixed","Mixed price ($)",p.mixed,"0.5")] : f("e-price","Price ($)",p.price,"0.5"),
+      f("e-count","On hand now ("+unit+")", nowLeft, liquor?"0.1":"1"),
+      f("e-add","Delivery to add ("+unit+")","", liquor?"0.1":"1"),
+      f("e-cost","Cost per " + (liquor?"bottle":p.cat==="wine"?"bottle":"can") + " ($)", p.cost, "0.01")),
+    h("p",{class:"muted"}, "On hand now: change it only after you count the shelf. It resets this item's count to what's really there. Delivery to add: a case of 24 is 24."),
+    err,
+    h("div",{class:"row"},
+      h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
+      h("button",{type:"button",class:"btn primary",id:"save-edit",onclick:async()=>{
+        const val = idn => { const el=$(idn); if(!el||el.value.trim()==="") return null; const n=Number(el.value); return isFinite(n)&&n>=0?n:NaN; };
+        const upd = {};
+        if (liquor){ const s=val("e-shot"), m=val("e-mixed"); if (s!=null) upd.shot=s; if (m!=null) upd.mixed=m; }
+        else { const pr=val("e-price"); if (pr!=null) upd.price=pr; }
+        const cnt = $("e-count").value.trim();
+        if (cnt !== (nowLeft == null ? "" : nowLeft)){
+          const c = val("e-count");
+          if (c == null){ upd.start = null; upd.received = 0; upd.soldBase = soldUnits(p.id); }
+          else { upd.start = c; upd.received = 0; upd.soldBase = soldUnits(p.id); }
+        }
+        const add = val("e-add"); if (add) upd.received = Math.round((((upd.received != null ? upd.received : num(p.received))||0)+add)*10)/10;
+        const cost = val("e-cost"); if (cost != null || $("e-cost").value.trim()==="") upd.cost = cost;
+        if (Object.values(upd).some(v=>Number.isNaN(v))){ err.textContent="Use plain numbers, like 24 or 4.5."; err.hidden=false; return; }
+        try { await withRetry(()=>S.db.doc("products/"+p.id).update(upd)); closeSheet(); toast(p.name+" updated"); }
+        catch(e){ err.textContent="Couldn't save. Check the Wi-Fi and try again."; err.hidden=false; }
+      }},"Save")));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+function closeSheet(){ const sh=$("sheet"); sh.hidden=true; sh.replaceChildren(); S.pay=null; S.tabOpen=null; S.tabArmed=null; }
+function stamp(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+async function saveFile(filename, text, mime){
+  const blob = new Blob([text], {type:mime});
+  try {
+    const file = new File([blob], filename, {type:mime});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:filename}); return true; }
+  } catch(e){ if (e && e.name === "AbortError") return false; }
+  try {
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000); return true;
+  } catch(e){ toast("Couldn't save the file on this device"); return false; }
+}
+const STORE_KEY = "mb-register-v1";
+async function backup(){
+  let raw = "{}"; try { raw = localStorage.getItem(STORE_KEY) || "{}"; } catch(e){}
+  const body = JSON.stringify({app:"mini-bar-register", version:1, savedAt:new Date().toISOString(), data:JSON.parse(raw)});
+  if (await saveFile("mini-bar-backup-"+stamp()+".json", body, "application/json")) toast("Backup saved");
+}
+function pickRestore(){
+  const inp = h("input",{type:"file",accept:".json,application/json",style:"display:none"});
+  inp.addEventListener("change", async ()=>{
+    const f = inp.files && inp.files[0]; inp.remove(); if (!f) return;
+    let parsed; try { parsed = JSON.parse(await f.text()); } catch(e){ toast("That file isn't a Mini Bar backup"); return; }
+    const data = parsed && parsed.app==="mini-bar-register" && parsed.data;
+    if (!data || !Object.keys(data).some(k=>k.startsWith("products/"))){ toast("That file isn't a Mini Bar backup"); return; }
+    const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Restore backup"},
+      h("h4",null,"Restore backup"),
+      h("div",{class:"due",style:"font-size:28px"}, "Replace everything on this iPad?"),
+      h("p",{class:"muted"}, "This swaps the menu, counts, open tabs, sales and past shifts on this device for the backup saved " + dayStr(parsed.savedAt) + " at " + clock(parsed.savedAt) + ". Anything rung up since then is lost."),
+      h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
+        h("button",{type:"button",class:"btn danger",onclick:()=>{ try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); location.reload(); } catch(e){ toast("Couldn't restore. The device storage is full."); } }},"Replace and restore")));
+    const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+  });
+  document.body.append(inp); inp.click();
+}
+const COLS = {item:["item","name","drink"], category:["category","type"], section:["section","group"], price:["price"], shot:["shot price","shot"], mixed:["mixed price","mixed"], pours:["pours per bottle","pours"], onhand:["on hand","count","on hand now"], cost:["unit cost","cost","cost per unit"]};
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res, rej)=>{ const sc=document.createElement("script"); sc.src="xlsx.mini.min.js"; sc.onload=()=>res(window.XLSX); sc.onerror=()=>rej(new Error("load")); document.head.append(sc); });
+}
+function slugify(t){ return String(t).toLowerCase().replace(/['\u2019]/g,"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) || "item"; }
+function cellNum(v){ if (v==null || String(v).trim()==="") return null; const n = Number(String(v).replace(/[$,\s]/g,"")); return isFinite(n) && n>=0 ? n : NaN; }
+function parseMenu(rows){
+  const errors = [], items = [];
+  const hi = rows.findIndex(r => (r||[]).some(c => String(c||"").trim().toLowerCase()==="item"));
+  if (hi < 0) return {items, errors:["Couldn't find the header row. The first column heading should be \"Item\"."]};
+  const head = rows[hi].map(c => String(c||"").trim().toLowerCase());
+  const col = {}; for (const [k, names] of Object.entries(COLS)) col[k] = head.findIndex(x => names.includes(x));
+  if (col.category < 0) errors.push("Missing the Category column.");
+  const get = (r,k) => col[k] < 0 ? null : r[col[k]];
+  const seen = new Set();
+  for (let i = hi+1; i < rows.length; i++){
+    const r = rows[i] || [], name = String(get(r,"item")||"").trim(); if (!name) continue;
+    const line = "Row " + (i+1) + " (" + name + "): ";
+    const c = String(get(r,"category")||"").trim().toLowerCase();
+    const cat = /liq|spirit|shot|booze/.test(c) ? "liquor" : /wine/.test(c) ? "wine" : /beer|seltzer|can|na/.test(c) ? "beer" : null;
+    if (!cat){ errors.push(line + "Category must be Beer, Liquor or Wine."); continue; }
+    const id = slugify(name); if (seen.has(id)){ errors.push(line + "listed twice."); continue; } seen.add(id);
+    const it = {id, name, cat, group: String(get(r,"section")||"").trim() || (cat==="beer"?"Beer":cat==="liquor"?"Liquor":"Wine")};
+    const onhand = cellNum(get(r,"onhand")), cost = cellNum(get(r,"cost"));
+    if (Number.isNaN(onhand)){ errors.push(line + "On Hand must be a number."); continue; }
+    if (Number.isNaN(cost)){ errors.push(line + "Unit Cost must be a number."); continue; }
+    it.onHand = onhand; it.cost = cost;
+    if (cat === "liquor"){
+      const shot = cellNum(get(r,"shot")), mixed = cellNum(get(r,"mixed")), pours = cellNum(get(r,"pours"));
+      if (shot == null || Number.isNaN(shot)){ errors.push(line + "needs a Shot Price."); continue; }
+      if (Number.isNaN(mixed) || Number.isNaN(pours)){ errors.push(line + "Mixed Price and Pours must be numbers."); continue; }
+      it.shot = shot; it.mixed = mixed == null ? shot + 1 : mixed; it.pours = pours || 16;
+    } else {
+      const price = cellNum(get(r,"price"));
+      if (price == null || Number.isNaN(price)){ errors.push(line + "needs a Price."); continue; }
+      it.price = price;
+    }
+    items.push(it);
+  }
+  if (!items.length && !errors.length) errors.push("No items found under the header row.");
+  return {items, errors};
+}
+function pickImport(){
+  const inp = h("input",{type:"file",accept:".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",style:"display:none"});
+  inp.addEventListener("change", async ()=>{
+    const f = inp.files && inp.files[0]; inp.remove(); if (!f) return;
+    let rows;
+    try {
+      const X = await loadXLSX();
+      const wb = X.read(new Uint8Array(await f.arrayBuffer()), {type:"array"});
+      const name = wb.SheetNames.find(n => /menu/i.test(n)) || wb.SheetNames[0];
+      rows = X.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:"", raw:false});
+    } catch(e){ toast("Couldn't open that file. Use the menu spreadsheet (.xlsx or .csv)."); return; }
+    showImport(f.name, parseMenu(rows));
+  });
+  document.body.append(inp); inp.click();
+}
+function showImport(fname, res){
+  /* Match rows to existing drinks by name first, so sales history and counts stay attached. */
+  for (const it of res.items){ const ex = S.products.find(p => String(p.name).trim().toLowerCase() === it.name.toLowerCase()); if (ex) it.id = ex.id; }
+  const {items, errors} = res, by = c => items.filter(i=>i.cat===c).length, counted = items.filter(i=>i.onHand!=null).length;
+  const gone = S.products.filter(p=>!items.some(i=>i.id===p.id));
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Import menu"},
+    h("h4",null,"Import menu · " + fname),
+    errors.length ? [h("div",{class:"due",style:"font-size:26px"}, "Fix " + errors.length + " problem" + (errors.length===1?"":"s") + " in the spreadsheet"),
+        h("ul",{class:"errlist"}, errors.slice(0,8).map(e=>h("li",null,e))),
+        errors.length>8 ? h("p",{class:"muted"}, "…and " + (errors.length-8) + " more.") : null,
+        h("p",{class:"muted"},"Nothing was changed. Fix these, save the file, and import it again."),
+        h("button",{type:"button",class:"btn",onclick:closeSheet},"OK")]
+    : [h("div",{class:"due",style:"font-size:28px"}, items.length + " items ready"),
+        h("p",{class:"muted"}, by("beer") + " beer and seltzer, " + by("liquor") + " liquor, " + by("wine") + " wine. " + counted + " have an On Hand count; those counts replace what Mini Bar POS shows now. Items with On Hand left blank keep their current count."),
+        gone.length ? h("p",{class:"note"}, gone.length + " item" + (gone.length===1?"":"s") + " not in the spreadsheet will come off the menu: " + gone.slice(0,6).map(p=>p.name).join(", ") + (gone.length>6?", …":"") + ". Past sales keep their names.") : null,
+        h("p",{class:"muted"},"Sales, tabs and past shifts stay as they are."),
+        h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
+          h("button",{type:"button",class:"btn primary",id:"apply-import",onclick:()=>applyImport(items)},"Replace menu"))]);
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+async function applyImport(items){
+  const old = new Map(S.products.map(p=>[p.id,p])), soldNow = {};
+  for (const it of items) soldNow[it.id] = soldUnits(it.id);
+  try {
+    let n = 0;
+    for (const it of items){
+      const o = old.get(it.id);
+      const d = {name:it.name, cat:it.cat, group:it.group, unit: it.cat==="liquor" ? "bottle" : "can", sort: ++n, cost: it.cost};
+      if (it.cat === "liquor"){ d.shot = it.shot; d.mixed = it.mixed; d.pours = it.pours; } else d.price = it.price;
+      if (it.onHand != null){ d.start = it.onHand; d.received = 0; d.soldBase = soldNow[it.id]; }
+      else if (o){ d.start = num(o.start); d.received = num(o.received)||0; d.soldBase = num(o.soldBase)||0; if (d.cost == null && num(o.cost) != null) d.cost = o.cost; }
+      else { d.start = null; d.received = 0; d.soldBase = soldNow[it.id]; }
+      await S.db.doc("products/"+it.id).set(d);
+    }
+    for (const p of old.values()) if (!items.some(i=>i.id===p.id)) await S.db.doc("products/"+p.id).delete();
+    closeSheet(); toast("Menu imported · " + items.length + " items");
+  } catch(e){ closeSheet(); toast("Import stopped partway. Restore your last backup or import again."); }
+}
+async function exportMenu(){
+  const q = v => { const t = String(v==null?"":v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
+  const rows = [["Item","Category","Section","Price","Shot Price","Mixed Price","Pours per Bottle","On Hand","Unit Cost"]];
+  for (const cat of ["beer","liquor","wine"]) for (const grp of groupsFor(cat)) for (const p of S.products.filter(x=>x.group===grp && x.cat===cat).sort((a,b)=>(a.sort||0)-(b.sort||0))){
+    const r = remaining(p);
+    rows.push([p.name, cat==="beer"?"Beer":cat==="liquor"?"Liquor":"Wine", grp, cat==="liquor"?"":p.price, cat==="liquor"?p.shot:"", cat==="liquor"?p.mixed:"", cat==="liquor"?p.pours:"",
+      r==null ? "" : (p.unit==="bottle" ? Math.max(0,r).toFixed(1) : Math.max(0,Math.floor(r))), num(p.cost)==null?"":p.cost]);
+  }
+  await saveFile("mini-bar-menu-"+stamp()+".csv", rows.map(r=>r.map(q).join(",")).join("\n"), "text/csv");
+}
+function startFresh(){
+  const card = h("div",{class:"card",role:"dialog","aria-modal":"true","aria-label":"Start fresh"},
+    h("h4",null,"Start fresh"),
+    h("div",{class:"due",style:"font-size:28px"}, "Clear all sales history?"),
+    h("p",{class:"muted"}, "This deletes every sale, open tab and past shift on this iPad, including practice sales. The menu and prices stay, and every count goes back to your last count plus deliveries, as if those sales never happened. Use it once, right before opening night."),
+    h("button",{type:"button",class:"btn",onclick:backup},"Back up first"),
+    h("div",{class:"row"}, h("button",{type:"button",class:"btn",onclick:closeSheet},"Cancel"), h("span",{class:"sp"}),
+      h("button",{type:"button",class:"btn danger",id:"confirm-fresh",onclick:doStartFresh},"Clear sales history")));
+  const sh=$("sheet"); sh.replaceChildren(card); sh.hidden=false;
+}
+async function doStartFresh(){
+  try {
+    /* Counts go back to the last count plus deliveries, as if the cleared sales never happened. */
+    for (const p of [...S.products]) await S.db.doc("products/"+p.id).update({soldBase:0});
+    for (const t of [...S.tickets]) await S.db.doc("tickets/"+t.id).delete();
+    for (const t of [...S.tabs]) await S.db.doc("tabs/"+t.id).delete();
+    for (const c of [...S.closeouts]) await S.db.doc("closeouts/"+c.id).delete();
+    S.order = []; S.hist = []; S.target = null; saveDraft(); renderOrder();
+    closeSheet(); toast("Sales history cleared. Ready to open.");
+  } catch(e){ closeSheet(); toast("Couldn't finish. Try again."); }
+}
+async function exportCsv(){
+  const q = v => { const s = String(v==null?"":v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const rows = [["Item","Section","Unit","Last count","Delivered since","Sold since count","Sold this shift","Left","Cost per unit","Value on hand"]];
+  for (const cat of ["beer","liquor","wine"]) for (const grp of groupsFor(cat)) for (const p of S.products.filter(x=>x.group===grp).sort((a,b)=>(a.sort||0)-(b.sort||0))){
+    const r = remaining(p);
+    rows.push([p.name, grp, p.unit==="bottle" ? (p.pours?"bottle ("+p.pours+" pours)":"bottle") : (p.cat==="wine"?"187 ml bottle":"can"), p.start, p.received||0,
+      soldSince(p) + (p.unit==="bottle"&&p.pours?" pours":""), shiftUnits(p.id), r==null?"not counted":(p.unit==="bottle"?Math.max(0,r).toFixed(1):Math.max(0,Math.floor(r))),
+      num(p.cost)==null?"":p.cost, (r==null||num(p.cost)==null)?"":(Math.max(0,r)*p.cost).toFixed(2)]);
+  }
+  const csv = rows.map(r=>r.map(q).join(",")).join("\n");
+  await saveFile("mini-bar-inventory-"+stamp()+".csv", csv, "text/csv");
+}
+
+/* ---------- nav ---------- */
+function show(view){
+  S.view = view; S.closing=false;
+  for (const v of ["register","tabs","today","inventory"]){ $("v-"+v).hidden = v!==view; const b=$("nav-"+v); if (v===view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }
+  renderAll();
+}
+function renderAll(){
+  renderShift();
+  if (S.view==="register"){ renderGrid(); renderOrder(); }
+  if (S.view==="tabs") renderTabs();
+  if (S.view==="today") renderToday();
+  if (S.view==="inventory") renderInventory();
+  if (S.tabOpen && !S.pay) renderTabSheet();
+}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
+document.querySelectorAll(".cats button").forEach(b=>b.addEventListener("click",()=>{
+  S.cat=b.dataset.cat; document.querySelectorAll(".cats button").forEach(x=>x.setAttribute("aria-pressed", String(x===b))); renderGrid();
+}));
+$("charge").addEventListener("click", ()=>{ if (S.target) addOrderToTab(S.target, null, null); else openPay(); });
+$("to-tab").addEventListener("click", ()=>{ if (S.target) stopAdding(); else openTabPicker(); });
+$("tabmode-cancel").addEventListener("click", stopAdding);
+$("clear-order").addEventListener("click", clearOrder);
+$("undo-last").addEventListener("click", undoLast);
+$("sheet").addEventListener("click", e=>{ if (e.target===$("sheet") && !(S.pay && S.pay.state==="saving")) closeSheet(); });
+
+let lock=null;
+async function wake(){ if (lock || !navigator.wakeLock) return; try { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release",()=>lock=null); } catch(e){} }
+document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") lock=null; });
+
+/* ---------- device-only storage (used when the account store can't be reached) ---------- */
+const MENU = [
+ ["bud-light","Bud Light","beer","$2 Domestic",2,48],["busch","Busch","beer","$2 Domestic",2,30],["busch-light","Busch Light","beer","$2 Domestic",2,180],
+ ["coors-light","Coors Light","beer","$2 Domestic",2,72],["miller-lite","Miller Lite","beer","$2 Domestic",2,72],["old-style","Old Style","beer","$2 Domestic",2,24],
+ ["pbr","PBR","beer","$2 Domestic",2,24],["milwaukees-best-light","Milwaukee's Best Light","beer","$2 Domestic",2,30],["busch-na","Busch NA","beer","$2 Domestic",2,24],
+ ["michelob-ultra","Michelob Ultra","beer","$4 Premium",4,72],["yuengling","Yuengling","beer","$4 Premium",4,24],["modelo","Modelo Especial","beer","$4 Premium",4,null],["blue-moon","Blue Moon","beer","$4 Premium",4,24],
+ ["anti-hero","Revolution Anti-Hero","beer","$4 Craft",4,0],["hazy-little-thing","Hazy Little Thing","beer","$4 Craft",4,24],
+ ["guinness","Guinness","beer","$5 Seltzer & Specialty",5,null],["athletic-na","Athletic NA IPA","beer","$5 Seltzer & Specialty",5,null],["nutrl","NUTRL","beer","$5 Seltzer & Specialty",5,24],
+ ["super-lyte","Super Lyte","beer","$5 Seltzer & Specialty",5,null],["surfside","Surfside","beer","$5 Seltzer & Specialty",5,null],["carbliss","Carbliss","beer","$5 Seltzer & Specialty",5,24],
+ ["cabernet","Cabernet","wine","Wine",5,null],["chardonnay","Chardonnay","wine","Wine",5,null],["brut","Brut Champagne","wine","Wine",6,null],
+ ["well-vodka","Well Vodka","Well",22,null],["well-gin","Well Gin","Well",22,null],["well-rum","Well Rum","Well",22,null],["well-whiskey","Well Whiskey","Well",22,null],["well-tequila","Well Tequila","Well",22,null],
+ ["amaretto","Amaretto","Well",22,null],["peach-schnapps","Peach Schnapps","Well",22,null],["peppermint","Peppermint Schnapps","Well",22,null],["triple-sec","Triple Sec","Well",22,null],["blue-curacao","Blue Curaçao","Well",22,null],
+ ["titos","Tito's","Call",16,4],["tanqueray","Tanqueray","Call",16,1],["bacardi","Bacardi","Call",16,null],["captain-morgan","Captain Morgan","Call",16,4],["malibu","Malibu","Call",16,null],
+ ["jose-cuervo","Jose Cuervo","Call",16,null],["fireball","Fireball","Call",16,4],["dr-mcgillicuddys","Dr. McGillicuddy's","Call",16,2],["jagermeister","Jägermeister","Call",16,null],
+ ["jack-daniels","Jack Daniel's","Call",16,4],["jack-fire","Jack Fire","Call",16,1],["jameson","Jameson","Call",16,null],["makers-mark","Maker's Mark","Call",16,null],["bulleit","Bulleit","Call",16,1],
+ ["baileys","Baileys","Call",16,1],["rumchata","RumChata","Call",16,1],["rumple-minze","Rumple Minze","Call",16,1],
+ ["patron","Patrón Silver","Top Shelf",16,null],["casamigos","Casamigos Blanco","Top Shelf",16,1],["woodford","Woodford Reserve","Top Shelf",16,1]
+];
+const COSTS = {"bud-light":0.96,"busch":0.72,"busch-light":0.72,"coors-light":0.95,"miller-lite":0.93,"old-style":0.8,"pbr":0.8,"milwaukees-best-light":0.66,"busch-na":0.85,
+ "michelob-ultra":1.13,"yuengling":0.93,"modelo":1.04,"blue-moon":1.46,"anti-hero":1.13,"hazy-little-thing":1.38,"guinness":1.71,"athletic-na":1.25,"nutrl":1.84,"super-lyte":1.75,"surfside":1.75,"carbliss":2.16,
+ "cabernet":1.4,"chardonnay":1.4,"brut":2.38,"well-vodka":6.25,"well-gin":10,"well-rum":10.5,"well-whiskey":10,"well-tequila":12.5,"amaretto":12.5,"peach-schnapps":12.5,"peppermint":12.5,"triple-sec":12.5,"blue-curacao":12.5,
+ "titos":24.54,"tanqueray":27.93,"bacardi":18.17,"captain-morgan":20.46,"malibu":19.54,"jose-cuervo":18.78,"fireball":19.87,"dr-mcgillicuddys":19.46,"jagermeister":24.29,"jack-daniels":25.54,"jack-fire":25.54,
+ "jameson":28.54,"makers-mark":30.37,"bulleit":32.2,"baileys":30.87,"rumchata":27.29,"rumple-minze":28.96,"patron":43.96,"casamigos":36.03,"woodford":40.02};
+function defaultProducts(){
+  const out = {}, sorts = {};
+  for (const r of MENU){
+    let d;
+    if (r[2]==="beer" || r[2]==="wine") d = {name:r[1],cat:r[2],group:r[3],price:r[4],unit:"can",start:null,received:0,soldBase:0};
+    else { const prices = {Well:[3,4],Call:[5,6],"Top Shelf":[7,8]}[r[2]]; d = {name:r[1],cat:"liquor",group:r[2],shot:prices[0],mixed:prices[1],unit:"bottle",pours:r[3],start:null,received:0,soldBase:0}; }
+    if (COSTS[r[0]] != null) d.cost = COSTS[r[0]];
+    sorts[d.group] = (sorts[d.group]||0) + 1; d.sort = sorts[d.group];
+    out["products/"+r[0]] = d;
+  }
+  return out;
+}
+function localDB(){
+  const KEY = "mb-register-v1";
+  let store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch(e){ store = {}; }
+  if (!Object.keys(store).some(k=>k.startsWith("products/"))) Object.assign(store, defaultProducts());
+  const subs = [];
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); return true; } catch(e){ return false; } };
+  persist();
+  const snap = col => ({docs: Object.entries(store).filter(([k])=>k.startsWith(col+"/") && k.split("/").length===2).map(([k,d])=>({id:k.split("/")[1], exists:true, data:()=>d}))});
+  const notify = () => setTimeout(()=>{ for (const s of subs) s.fn(snap(s.col)); }, 0);
+  const write = fn => { fn(); if (!persist()) throw {code:"unavailable"}; notify(); };
+  const doc = path => ({ id: path.split("/").pop(), path,
+    set: async d => write(()=>{ store[path] = JSON.parse(JSON.stringify(d)); }),
+    update: async d => { if (!store[path]) throw {code:"invalid_argument"}; write(()=>{ store[path] = Object.assign({}, store[path], JSON.parse(JSON.stringify(d))); }); },
+    delete: async () => write(()=>{ delete store[path]; }) });
+  const mint = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  return { local:true, doc, collection: col => ({ doc: id => doc(col + "/" + (id || mint())),
+    onSnapshot: fn => { subs.push({col, fn}); setTimeout(()=>fn(snap(col)),0); return ()=>{}; } }) };
+}
+
+/* ---------- boot ---------- */
+function subscribe(db, onFail){
+  let gotProducts = false;
+  db.collection("products").onSnapshot(s=>{ gotProducts = true; S.products = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); S.loaded=true;
+    const known = new Set(S.products.map(p=>p.id)); const before=S.order.length; S.order = S.order.filter(l=>known.has(l.id)); if (S.order.length!==before) saveDraft();
+    renderAll(); }, onFail);
+  db.collection("tickets").onSnapshot(s=>{ S.tickets = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
+  db.collection("tabs").onSnapshot(s=>{ S.tabs = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
+  db.collection("closeouts").onSnapshot(s=>{ S.closeouts = s.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id}, d.data())); renderAll(); }, onFail);
+  return () => gotProducts;
+}
+function goLocal(why){
+  if (S.mode === "local") return;
+  S.mode = "local"; S.db = localDB();
+  S.products = []; S.tickets = []; S.tabs = []; S.closeouts = [];
+  subscribe(S.db, ()=>{});
+}
+loadDraft(); renderAll();
+goLocal();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+</script>
+</body>
+</html>
