@@ -81,6 +81,10 @@ main{flex:1;min-height:0;display:flex}
 .gauge i{display:block;height:100%;background:#4f8f63}
 .gauge.low i{background:var(--warn)} .gauge.out i{background:var(--bad)}
 .tile.isout{opacity:.55}
+/* Brand colors: a stripe down the left edge (split when a brand has two colors) and a faint tint. */
+.tile.brand{padding-left:22px;background:linear-gradient(90deg,color-mix(in srgb,var(--b1) 20%,var(--panel)) 0,var(--panel) 60%)}
+.tile.brand::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:linear-gradient(var(--b1) 0 58%,var(--b2) 58% 100%)}
+.tile.brand:active{background:var(--raise)}
 .ltile{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:12px 10px 14px;display:flex;flex-direction:column;gap:10px}
 .ltile .top{display:flex;flex-direction:column;gap:2px;padding-inline:2px;min-height:38px}
 .ltile .n{font-weight:600;font-size:15.5px}
@@ -232,7 +236,7 @@ td button{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(
   .qty button{width:36px;height:36px}
   .total{padding:6px 0 0} .total b{font-size:26px}
   .charge,.totab{min-height:54px}
-  .stats{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr} .stats .stat:first-child{grid-column:1/-1}
   .datatools .btn{min-height:44px;font-size:14px;padding:0 12px}
   .tk{grid-template-columns:56px 1fr auto}
   .tk button{grid-column:3}
@@ -351,7 +355,6 @@ const itemsTotal = items => Math.round((items||[]).reduce((s,i)=>s+(num(i.price)
 const itemsCount = items => (items||[]).reduce((s,i)=>s+(num(i.qty)||0),0);
 /* Sold since the last count: a recount or an import sets soldBase to the sold total at that moment. */
 function soldSince(p){ return Math.max(0, soldUnits(p.id) - (num(p.soldBase)||0)); }
-function unitCost(p){ const c = num(p && p.cost); if (c == null) return null; return p.unit === "bottle" && num(p.pours) ? c / p.pours : c; }
 function remaining(p){
   const start = num(p.start); if (start == null) return null;
   const rec = num(p.received)||0, sold = soldSince(p);
@@ -421,7 +424,8 @@ function renderGrid(){
             h("button",{type:"button","aria-label":p.name+" mixed "+money(p.mixed), onclick:()=>addItem(p,"mixed")}, h("small",null,"Mixed"), h("b",{class:"num"},money(p.mixed)))
           ), gauge(p)));
       } else {
-        tiles.append(h("button",{type:"button", class:"tile" + (lvl==="out"?" isout":""), onclick:()=>addItem(p)},
+        const bc = brandColors(p.name);
+        tiles.append(h("button",{type:"button", class:"tile" + (bc?" brand":"") + (lvl==="out"?" isout":""), style: bc ? `--b1:${bc[0]};--b2:${bc[1]||bc[0]}` : null, onclick:()=>addItem(p)},
           h("span",{class:"n"}, p.name),
           h("span",{class:"foot"}, h("span",{class:"chip num " + tierClass(p.price)}, money(p.price)), leftEl),
           gauge(p)));
@@ -729,16 +733,6 @@ function shiftSummary(){
   }
   return {items, counts};
 }
-function estProfit(tickets){
-  let cost = 0, known = 0, all = 0;
-  for (const t of tickets) for (const i of (t.items||[])){
-    const q = num(i.qty)||0, c = unitCost(S.products.find(p=>p.id===i.id)); all += q;
-    if (c != null){ cost += c*q; known += q; }
-  }
-  if (!known) return null;
-  const tot = tickets.reduce((s,t)=>s+(num(t.total)||0),0);
-  return h("div",{class:"stat"}, h("small",null,"Est. profit" + (known<all?" (partial)":"")), h("b",{class:"num"}, money(tot - cost)));
-}
 function renderToday(){
   const w = $("today"); w.replaceChildren();
   const tickets = [...S.tickets].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
@@ -747,8 +741,7 @@ function renderToday(){
   w.append(h("div",{class:"stats"},
     h("div",{class:"stat"},h("small",null,"Cash in drawer (sales)"),h("b",{class:"num"},money(tot))),
     h("div",{class:"stat"},h("small",null,"Orders"),h("b",{class:"num"},tickets.length)),
-    h("div",{class:"stat"},h("small",null,"Drinks sold"),h("b",{class:"num"},drinks)),
-    estProfit(tickets)));
+    h("div",{class:"stat"},h("small",null,"Drinks sold"),h("b",{class:"num"},drinks))));
 
   const top = Object.values(shiftSummary().items).sort((a,b)=>b.qty-a.qty).slice(0,6);
   if (top.length) w.append(h("p",{class:"muted"},"Top sellers: " + top.map(r=>r.name+(r.v?" ("+r.v+")":"")+" ×"+r.qty).join(" · ")));
@@ -1094,6 +1087,35 @@ async function wake(){ if (lock || !navigator.wakeLock) return; try { lock = awa
 document.addEventListener("visibilitychange",()=>{ if (document.visibilityState==="visible") lock=null; });
 
 /* ---------- device-only storage (used when the account store can't be reached) ---------- */
+/* Brand colors for beer and seltzer tiles, matched by item name (case and apostrophes ignored),
+   so items renamed or re-imported from the menu file keep their color. [main, second]; leave
+   second off for one color. Items not listed here show a plain tile. Colors are fixed hex
+   values from this list, never from imported data. */
+const BRAND_COLORS = {
+  "bud light": ["#1f4fd1", "#b9c3d3"],
+  "busch": ["#2457a0", "#e9eef5"],
+  "busch light": ["#4aa3e0", "#e9eef5"],
+  "busch na": ["#35b2c4", "#2457a0"],
+  "coors light": ["#c3cad3", "#c0272d"],
+  "miller lite": ["#f2f2ee", "#1b3f8b"],
+  "old style": ["#c8102e", "#e9eef5"],
+  "pbr": ["#1a4ca0", "#d22630"],
+  "milwaukees best light": ["#2b66b5", "#d4a72c"],
+  "michelob ultra": ["#1f4a86", "#c3cad3"],
+  "yuengling": ["#c8963e", "#7a1e1e"],
+  "modelo especial": ["#d4a72c", "#1f3a93"],
+  "blue moon": ["#2e4c8f", "#f08a24"],
+  "revolution anti-hero": ["#d6262e"],
+  "hazy little thing": ["#f4a259", "#3ba99c"],
+  "guinness": ["#e8dcc0", "#c9a23a"],
+  "athletic na ipa": ["#3e8e41", "#f28c28"],
+  "nutrl": ["#ececec", "#e0457b"],
+  "super lyte": ["#8e5cf5"],
+  "surfside": ["#3fb8af", "#f6d365"],
+  "carbliss": ["#f5a3c7", "#7ac7e8"]
+};
+const brandColors = name => BRAND_COLORS[String(name||"").toLowerCase().replace(/[’'`]/g,"").replace(/\s+/g," ").trim()] || null;
+
 const MENU = [
  ["bud-light","Bud Light","beer","$2 Domestic",2,48],["busch","Busch","beer","$2 Domestic",2,30],["busch-light","Busch Light","beer","$2 Domestic",2,180],
  ["coors-light","Coors Light","beer","$2 Domestic",2,72],["miller-lite","Miller Lite","beer","$2 Domestic",2,72],["old-style","Old Style","beer","$2 Domestic",2,24],
