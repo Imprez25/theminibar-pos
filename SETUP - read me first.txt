@@ -45,7 +45,9 @@ Setup takes about 15 minutes, once.
 
 4. EVERY NIGHT
 --------------
- a. Count the drawer. Today screen > Close shift (tap twice).
+ a. Today screen > Close shift. Tap who's closing, count the drawer
+    (not the tip jar) and type it in. The app shows over / short.
+    Set the starting cash once: Close shift > Change (manager PIN).
  b. Tap "Back up now" in the message that pops up, and save the file to
     Files, email it to yourself, or AirDrop it. You can also back up any
     time from the Inventory screen.
@@ -74,6 +76,10 @@ Setup takes about 15 minutes, once.
  Deliveries: Inventory > Receive delivery, pick the distributor; it
  starts from your reorder list, so usually you just tap Add delivery.
  Recounts: Inventory > Count mode, type what's on the shelf, Save.
+ Comps: tap drinks, then Comp (next to Undo last), pick a reason. They
+ come off inventory and show on Today but never touch the drawer.
+ Owner reports (Today, manager PIN): Weekly summary, Nightly log file
+ (same columns as the A/B workbook's Nightly log), Past shifts.
  Ordering: give items a Par level and Distributor (Edit, or the Par and
  Distributor columns in the menu file). Inventory > Reorder list shows
  what to order, grouped by distributor, and Share list sends it.
